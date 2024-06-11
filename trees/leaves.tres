@@ -1,0 +1,19 @@
+[gd_resource type="ShaderMaterial" load_steps=3 format=3 uid="uid://ukfhsps65u4r"]
+
+[ext_resource type="Shader" path="res://tree.gdshader" id="1_tdxdp"]
+[ext_resource type="Texture2D" uid="uid://cdl3pshlnk3p2" path="res://trees/textures/branch.png" id="2_13ucr"]
+
+[resource]
+resource_local_to_scene = true
+render_priority = 0
+shader = ExtResource("1_tdxdp")
+shader_parameter/transmission = null
+shader_parameter/sway_speed = 1.0
+shader_parameter/sway_strength = Vector3(0.1, 0.1, 0.1)
+shader_parameter/sway_phase_len = 0.5
+shader_parameter/sway_scale = 1.0
+shader_parameter/pivot = 1.0
+shader_parameter/wave = 0.5
+shader_parameter/shake_strength = Vector3(1, 1, 1)
+shader_parameter/shake_speed = 0.5
+shader_parameter/texture_albedo = ExtResource("2_13ucr")

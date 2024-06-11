@@ -1,0 +1,14 @@
+[gd_scene load_steps=4 format=3 uid="uid://dakalwyqwtne2"]
+
+[ext_resource type="Script" path="res://terrain/world.gd" id="1_f4ivf"]
+[ext_resource type="PackedScene" uid="uid://cv4vhagwur27r" path="res://terrain/terrain_chunk.tscn" id="2_cvmsj"]
+[ext_resource type="Script" path="res://terrain/NoiseMap.cs" id="2_ssy5k"]
+
+[node name="World" type="Node3D"]
+script = ExtResource("1_f4ivf")
+size = 10
+chunk_size = 1000
+chunk = ExtResource("2_cvmsj")
+
+[node name="heightmap" type="Node" parent="."]
+script = ExtResource("2_ssy5k")

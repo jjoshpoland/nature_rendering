@@ -1,0 +1,20 @@
+[gd_scene load_steps=5 format=3 uid="uid://bjtooce2b242"]
+
+[ext_resource type="PackedScene" uid="uid://dd6jumra2uplh" path="res://trees/normal_tree.glb" id="1_osysv"]
+[ext_resource type="Material" uid="uid://cto3o4u3ykat0" path="res://trees/trees.tres" id="2_4voc3"]
+[ext_resource type="Material" uid="uid://ukfhsps65u4r" path="res://trees/leaves.tres" id="3_0ofnl"]
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_b5nk7"]
+
+[node name="normal_tree" instance=ExtResource("1_osysv")]
+
+[node name="trunk" parent="." index="0"]
+surface_material_override/0 = ExtResource("2_4voc3")
+
+[node name="leaves" parent="." index="1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0345707, 0.0403013, -0.038208)
+surface_material_override/0 = ExtResource("3_0ofnl")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="." index="2"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.77924, 1.35649, 0)
+mesh = SubResource("CapsuleMesh_b5nk7")
