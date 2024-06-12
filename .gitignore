@@ -17,3 +17,7 @@ mono_crash.*.json
 # Addons (Can be reverted later)
 addons/AsepriteWizard
 addons/anthonyec.camera_preview
+/.vs/NATURE_RENDERING/DesignTimeBuild
+/.vs/NATURE_RENDERING/FileContentIndex
+/.vs/NATURE_RENDERING/DesignTimeBuild
+/.vs/NATURE_RENDERING/v17
