@@ -1,0 +1,14 @@
+[remap]
+
+importer="image"
+type="Image"
+uid="uid://cx33au6ijdfq0"
+path="res://.godot/imported/snow.png-12d1817d3f8cb4dcc04979475b9123c0.image"
+
+[deps]
+
+source_file="res://terrain/textures/snow.png"
+dest_files=["res://.godot/imported/snow.png-12d1817d3f8cb4dcc04979475b9123c0.image"]
+
+[params]
+

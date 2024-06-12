@@ -1,0 +1,7 @@
+[gd_resource type="ShaderMaterial" load_steps=2 format=3 uid="uid://bhyrfegal66dy"]
+
+[ext_resource type="Shader" path="res://terrain/materials/terrain.gdshader" id="1_yi24k"]
+
+[resource]
+render_priority = 0
+shader = ExtResource("1_yi24k")

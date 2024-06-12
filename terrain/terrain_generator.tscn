@@ -1,8 +1,22 @@
-[gd_scene load_steps=6 format=3 uid="uid://drwrky8v30cmd"]
+[gd_scene load_steps=17 format=3 uid="uid://drwrky8v30cmd"]
 
 [ext_resource type="Script" path="res://terrain/TerrainGenerator.cs" id="1_xjpu7"]
 [ext_resource type="PackedScene" uid="uid://dxfbx4ay36xdt" path="res://noisemap.tscn" id="2_ux6ht"]
+[ext_resource type="Image" uid="uid://dk2g1fdi4ekta" path="res://terrain/textures/dirt.png" id="2_w1mke"]
 [ext_resource type="Script" path="res://terrain/QuadTreeNode.cs" id="3_lktyk"]
+[ext_resource type="Image" uid="uid://hdfp8ocnivbx" path="res://terrain/textures/rocks.png" id="3_wu0v2"]
+[ext_resource type="Image" uid="uid://ca0rlomwcf2nu" path="res://terrain/textures/grass.png" id="4_cidri"]
+[ext_resource type="Image" uid="uid://b24phv71i4vcd" path="res://terrain/textures/grass2.png" id="5_ps3ew"]
+[ext_resource type="Image" uid="uid://rk5ne1x72ay6" path="res://terrain/textures/drygrass.png" id="6_5683m"]
+[ext_resource type="Image" uid="uid://b5ka2dgja403e" path="res://terrain/textures/forestfloor.png" id="7_pdyib"]
+[ext_resource type="Image" uid="uid://cm6bcy6o07334" path="res://terrain/textures/sand128.png" id="8_42o7y"]
+[ext_resource type="Image" uid="uid://v3c3tehly4nk" path="res://terrain/textures/taiga.png" id="9_j0uqy"]
+[ext_resource type="Image" uid="uid://d4iwgyfb0qbuc" path="res://terrain/textures/tundra.png" id="10_luguu"]
+[ext_resource type="Image" uid="uid://cx33au6ijdfq0" path="res://terrain/textures/snow.png" id="11_lro4i"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_xh2va"]
+vertex_color_use_as_albedo = true
+vertex_color_is_srgb = true
 
 [sub_resource type="Image" id="Image_khr86"]
 data = {
@@ -20,19 +34,20 @@ seed = 6
 script = ExtResource("1_xjpu7")
 needsUpdate = true
 Size = 8192
-LODDist = 256.0
+MaxHeight = 512.0
+baseResolution = 256
+LODLevels = 5
 Player = NodePath("Node3D")
 HeightMap = NodePath("noisemap")
+TerrainMaterial = SubResource("StandardMaterial3D_xh2va")
+TerrainTextures = [ExtResource("2_w1mke"), ExtResource("8_42o7y"), ExtResource("3_wu0v2"), ExtResource("4_cidri"), ExtResource("5_ps3ew"), ExtResource("6_5683m"), ExtResource("7_pdyib"), ExtResource("9_j0uqy"), ExtResource("10_luguu"), ExtResource("11_lro4i")]
 
 [node name="noisemap" parent="." instance=ExtResource("2_ux6ht")]
 map = SubResource("Image_khr86")
 noise = SubResource("FastNoiseLite_p7lxj")
 
 [node name="Node3D" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2010.5, 25.4349, 6239.36)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1749.63, -3.9882, 4039.9)
 
-[node name="@Node3D@31984" type="Node3D" parent="."]
-script = ExtResource("3_lktyk")
-
-[node name="@Node3D@18740" type="Node3D" parent="."]
+[node name="@Node3D@67719" type="Node3D" parent="."]
 script = ExtResource("3_lktyk")

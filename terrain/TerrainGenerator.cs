@@ -18,13 +18,18 @@ public partial class TerrainGenerator : Node3D
     [Export]
     public int baseResolution = 64;
     [Export]
-    public float LODDist = 250f;
+    public float LODDist = 256f;
     [Export]
     public int LODLevels = 3;
     [Export]
     public Node3D Player;
     [Export]
     public NoiseMap HeightMap;
+    [Export]
+    public StandardMaterial3D TerrainMaterial;
+    [Export]
+    public Image[] TerrainTextures;
+    private Texture2DArray TerrainTextureArray;
     private QuadTreeNode quadTreeRoot;
     private Vector3 prevPlayerPos;
     
@@ -55,10 +60,13 @@ public partial class TerrainGenerator : Node3D
 
     public void Generate()
     {
+        TerrainTextureArray = new Texture2DArray();
+        TerrainTextureArray.CreateFromImages(new Godot.Collections.Array<Image>(TerrainTextures));
         quadTreeRoot = new QuadTreeNode(0, LODDist, new Rect2(Vector2.Zero, new Vector2(Size, Size)));
         AddChild(quadTreeRoot);
         quadTreeRoot.Owner = this;
         GenerateQuadtree(quadTreeRoot);
+        
     }
 
     public void Clear()
@@ -71,7 +79,7 @@ public partial class TerrainGenerator : Node3D
         
         foreach(var child in GetChildren())
         {
-            if(child is MeshInstance3D)
+            if(child is MeshInstance3D || child is QuadTreeNode)
             {
                 child.QueueFree();
             }
@@ -125,9 +133,12 @@ public partial class TerrainGenerator : Node3D
         var dataTool = new MeshDataTool();
         List<Vertex> vertices = new List<Vertex>();
         surfaceTool.Begin(Mesh.PrimitiveType.Triangles);
+        surfaceTool.SetCustomFormat(0, SurfaceTool.CustomFormat.RgbaFloat);
 
         int width = baseResolution / resolution;
         int height = baseResolution / resolution;
+
+        float[,] heightCache = new float[width, height];
 
         for (int y = 0; y < height; y++)
         {
@@ -135,33 +146,64 @@ public partial class TerrainGenerator : Node3D
             {
                 float fx = x / (float)(width - 2);
                 float fy = y / (float)(height - 2);
-                float heightValue = HeightMap.SampleMap(bounds.Position.X + fx * bounds.Size.X, bounds.Position.Y + fy * bounds.Size.Y, Size);
-                Vertex vertex = new Vertex(new Vector3(bounds.Position.X + fx * bounds.Size.X, heightValue * MaxHeight, bounds.Position.Y + fy * bounds.Size.Y), new Vector2I(x, y));
-                vertices.Add(vertex);
+                //if (resolution <= 2)
+                //{
+                //    fx = x / (float)(width - 1);
+                //    fy = y / (float)(height - 1);
+                //}
+                heightCache[x, y] = HeightMap.SampleMap(bounds.Position.X + fx * bounds.Size.X, bounds.Position.Y + fy * bounds.Size.Y, Size);
+                //Vertex vertex = new Vertex(new Vector3(bounds.Position.X + fx * bounds.Size.X, heightValue * MaxHeight, bounds.Position.Y + fy * bounds.Size.Y), new Vector2I(x, y));
+                //vertices.Add(vertex);
             }
         }
 
-        foreach(Vertex vertex in vertices)
+        for (int y = 0; y < height - 1; y++)
         {
-            int x = vertex.Coords.X;
-            int y = vertex.Coords.Y;
-            surfaceTool.AddVertex(vertex.Position);
-
-            if (x < width - 1 && y < height - 1)
+            for (int x = 0; x < width - 1; x++)
             {
-                surfaceTool.AddIndex(y * width + x);
-                surfaceTool.AddIndex(y * width + x + 1);
-                surfaceTool.AddIndex((y + 1) * width + x);
+                float fx = x / (float)(width - 2);
+                float fy = y / (float)(height - 2);
 
-                surfaceTool.AddIndex(y * width + x + 1);
-                surfaceTool.AddIndex((y + 1) * width + x + 1);
-                surfaceTool.AddIndex((y + 1) * width + x);
+                Vector3 v0 = new Vector3(bounds.Position.X + fx * bounds.Size.X, heightCache[x, y] * MaxHeight, bounds.Position.Y + fy * bounds.Size.Y);
+                Vector3 v1 = new Vector3(bounds.Position.X + (fx + 1.0f / (width - 2)) * bounds.Size.X, heightCache[x + 1, y] * MaxHeight, bounds.Position.Y + fy * bounds.Size.Y);
+                Vector3 v2 = new Vector3(bounds.Position.X + fx * bounds.Size.X, heightCache[x, y + 1] * MaxHeight, bounds.Position.Y + (fy + 1.0f / (height - 2)) * bounds.Size.Y);
+                Vector3 v3 = new Vector3(bounds.Position.X + (fx + 1.0f / (width - 2)) * bounds.Size.X, heightCache[x + 1, y + 1] * MaxHeight, bounds.Position.Y + (fy + 1.0f / (height - 2)) * bounds.Size.Y);
+
+                //Get the texture at each vertex
+                //int tex0 = texCache[v0.x, v0.z]
+                //int tex1 = texCache...
+
+                int tex0 = 0;
+                int tex1 = 0;
+                int tex2 = 0;   
+                int tex3 = 0;
+
+                // First triangle of the quad
+                AddTriangle(surfaceTool, v0, v1, v2, new Color(1, 0, 0), new Color(0, 0, 1), new Color(0, 1, 0), new Color(tex0, tex1, tex2));
+
+                // Second triangle of the quad
+                AddTriangle(surfaceTool, v2, v1, v3, new Color(1, 0, 0), new Color(0, 0, 1), new Color(0, 1, 0), new Color(tex2, tex1, tex3));
             }
         }
         surfaceTool.GenerateNormals();
+        var mesh = surfaceTool.Commit();
+        mesh.SurfaceSetMaterial(0, TerrainMaterial);
+        return mesh; 
+    }
 
+    private void AddTriangle(SurfaceTool surfaceTool, Vector3 v1, Vector3 v2, Vector3 v3, Color c1, Color c2, Color c3, Color texIndexes)
+    {
+        surfaceTool.SetColor(c1);
+        surfaceTool.SetCustom(0, texIndexes);
+        surfaceTool.AddVertex(v1);
+        
+        surfaceTool.SetColor(c2);
+        surfaceTool.SetCustom(0, texIndexes);
+        surfaceTool.AddVertex(v2);
 
-        return surfaceTool.Commit(); 
+        surfaceTool.SetColor(c3);
+        surfaceTool.SetCustom(0, texIndexes);
+        surfaceTool.AddVertex(v3);
     }
 
     public void UpdateLod(Vector3 cameraPosition)
@@ -191,6 +233,7 @@ public partial class TerrainGenerator : Node3D
             if (node.MeshInstance.GetParent() == null)
             {
                 AddChild(node.MeshInstance);
+                //node.MeshInstance.Owner = node;
             }
         }
         else

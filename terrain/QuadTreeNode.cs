@@ -26,7 +26,7 @@ public partial class QuadTreeNode : Node3D
 
     public QuadTreeNode()
     {
-        Level = 4;
+        Level = 0;
         Bounds = new Rect2();
         LODDist = 100;
         Children = new List<QuadTreeNode>();
