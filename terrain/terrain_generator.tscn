@@ -1,6 +1,7 @@
-[gd_scene load_steps=17 format=3 uid="uid://drwrky8v30cmd"]
+[gd_scene load_steps=22 format=3 uid="uid://drwrky8v30cmd"]
 
 [ext_resource type="Script" path="res://terrain/TerrainGenerator.cs" id="1_xjpu7"]
+[ext_resource type="Material" uid="uid://bhyrfegal66dy" path="res://terrain/materials/terrain.tres" id="2_dfn4m"]
 [ext_resource type="PackedScene" uid="uid://dxfbx4ay36xdt" path="res://noisemap.tscn" id="2_ux6ht"]
 [ext_resource type="Image" uid="uid://dk2g1fdi4ekta" path="res://terrain/textures/dirt.png" id="2_w1mke"]
 [ext_resource type="Script" path="res://terrain/QuadTreeNode.cs" id="3_lktyk"]
@@ -13,10 +14,21 @@
 [ext_resource type="Image" uid="uid://v3c3tehly4nk" path="res://terrain/textures/taiga.png" id="9_j0uqy"]
 [ext_resource type="Image" uid="uid://d4iwgyfb0qbuc" path="res://terrain/textures/tundra.png" id="10_luguu"]
 [ext_resource type="Image" uid="uid://cx33au6ijdfq0" path="res://terrain/textures/snow.png" id="11_lro4i"]
+[ext_resource type="PackedScene" uid="uid://rovn20obd8sv" path="res://InfiniteOcean/ocean_pos_tracker.tscn" id="14_7ak4y"]
+[ext_resource type="PackedScene" uid="uid://d1gbccf48ffk8" path="res://InfiniteOcean/ocean_map.tscn" id="16_mq33p"]
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_xh2va"]
-vertex_color_use_as_albedo = true
-vertex_color_is_srgb = true
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_i7v2o"]
+sky_horizon_color = Color(0.64625, 0.65575, 0.67075, 1)
+ground_horizon_color = Color(0.64625, 0.65575, 0.67075, 1)
+
+[sub_resource type="Sky" id="Sky_se1i5"]
+sky_material = SubResource("ProceduralSkyMaterial_i7v2o")
+
+[sub_resource type="Environment" id="Environment_hbp3j"]
+background_mode = 2
+sky = SubResource("Sky_se1i5")
+tonemap_mode = 2
+glow_enabled = true
 
 [sub_resource type="Image" id="Image_khr86"]
 data = {
@@ -39,15 +51,36 @@ baseResolution = 256
 LODLevels = 5
 Player = NodePath("Node3D")
 HeightMap = NodePath("noisemap")
-TerrainMaterial = SubResource("StandardMaterial3D_xh2va")
+TerrainMaterial = ExtResource("2_dfn4m")
 TerrainTextures = [ExtResource("2_w1mke"), ExtResource("8_42o7y"), ExtResource("3_wu0v2"), ExtResource("4_cidri"), ExtResource("5_ps3ew"), ExtResource("6_5683m"), ExtResource("7_pdyib"), ExtResource("9_j0uqy"), ExtResource("10_luguu"), ExtResource("11_lro4i")]
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(-0.866023, -0.433016, 0.250001, -0.171487, 0.726899, 0.664989, -0.469676, 0.533024, -0.703768, 0, 0, 0)
+shadow_enabled = true
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_hbp3j")
 
 [node name="noisemap" parent="." instance=ExtResource("2_ux6ht")]
 map = SubResource("Image_khr86")
 noise = SubResource("FastNoiseLite_p7lxj")
 
 [node name="Node3D" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1749.63, -3.9882, 4039.9)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1736.75, -3.9882, 1591.36)
 
-[node name="@Node3D@67719" type="Node3D" parent="."]
+[node name="OceanPosTracker" parent="Node3D" instance=ExtResource("14_7ak4y")]
+
+[node name="OceanMap" parent="." instance=ExtResource("16_mq33p")]
+transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0)
+
+[node name="@Node3D@105972" type="Node3D" parent="."]
+script = ExtResource("3_lktyk")
+
+[node name="@Node3D@112269" type="Node3D" parent="."]
+script = ExtResource("3_lktyk")
+
+[node name="@Node3D@19041" type="Node3D" parent="."]
+script = ExtResource("3_lktyk")
+
+[node name="@Node3D@20931" type="Node3D" parent="."]
 script = ExtResource("3_lktyk")

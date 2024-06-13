@@ -1,0 +1,7 @@
+[gd_scene load_steps=2 format=3 uid="uid://bbdypic336ono"]
+
+[ext_resource type="Script" path="res://InfiniteOcean/Ocean.gd" id="1_gknch"]
+
+[node name="Ocean" type="Node3D"]
+transform = Transform3D(59.9907, 0, 1.05448, 0, 1, 0, -1.05448, 0, 59.9907, 0, 0, 0)
+script = ExtResource("1_gknch")

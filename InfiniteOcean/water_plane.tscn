@@ -1,0 +1,11 @@
+[gd_scene load_steps=3 format=3 uid="uid://dvywsephmqsnd"]
+
+[ext_resource type="Material" uid="uid://cjjt47pif1vtk" path="res://InfiniteOcean/water.tres" id="1_agdcc"]
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_orf7b"]
+resource_local_to_scene = true
+size = Vector2(10.05, 10.05)
+
+[node name="WaterPlane" type="MeshInstance3D"]
+mesh = SubResource("PlaneMesh_orf7b")
+surface_material_override/0 = ExtResource("1_agdcc")

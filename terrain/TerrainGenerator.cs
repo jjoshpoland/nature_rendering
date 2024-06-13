@@ -26,7 +26,7 @@ public partial class TerrainGenerator : Node3D
     [Export]
     public NoiseMap HeightMap;
     [Export]
-    public StandardMaterial3D TerrainMaterial;
+    public ShaderMaterial TerrainMaterial;
     [Export]
     public Image[] TerrainTextures;
     private Texture2DArray TerrainTextureArray;
@@ -62,6 +62,7 @@ public partial class TerrainGenerator : Node3D
     {
         TerrainTextureArray = new Texture2DArray();
         TerrainTextureArray.CreateFromImages(new Godot.Collections.Array<Image>(TerrainTextures));
+        TerrainMaterial.SetShaderParameter("texture_array", TerrainTextureArray);
         quadTreeRoot = new QuadTreeNode(0, LODDist, new Rect2(Vector2.Zero, new Vector2(Size, Size)));
         AddChild(quadTreeRoot);
         quadTreeRoot.Owner = this;
@@ -178,11 +179,20 @@ public partial class TerrainGenerator : Node3D
                 int tex2 = 0;   
                 int tex3 = 0;
 
+                Vector2 uv0 = new Vector2(v0.X / bounds.Size.X, v0.Z / bounds.Size.Y);
+                Vector2 uv1 = new Vector2(v1.X / bounds.Size.X, v1.Z / bounds.Size.Y);
+                Vector2 uv2 = new Vector2(v2.X / bounds.Size.X, v2.Z / bounds.Size.Y);
+                Vector2 uv3 = new Vector2(v3.X / bounds.Size.X, v3.Z / bounds.Size.Y);
+
                 // First triangle of the quad
-                AddTriangle(surfaceTool, v0, v1, v2, new Color(1, 0, 0), new Color(0, 0, 1), new Color(0, 1, 0), new Color(tex0, tex1, tex2));
+                AddTriangle(surfaceTool, v0, v1, v2, new Color(1, 0, 0), new Color(0, 0, 1), new Color(0, 1, 0), 
+                    uv0, uv1, uv2, 
+                    new Color(tex0, tex1, tex2));
 
                 // Second triangle of the quad
-                AddTriangle(surfaceTool, v2, v1, v3, new Color(1, 0, 0), new Color(0, 0, 1), new Color(0, 1, 0), new Color(tex2, tex1, tex3));
+                AddTriangle(surfaceTool, v2, v1, v3, new Color(1, 0, 0), new Color(0, 0, 1), new Color(0, 1, 0), 
+                    uv2, uv1, uv3, 
+                    new Color(tex2, tex1, tex3));
             }
         }
         surfaceTool.GenerateNormals();
@@ -191,17 +201,23 @@ public partial class TerrainGenerator : Node3D
         return mesh; 
     }
 
-    private void AddTriangle(SurfaceTool surfaceTool, Vector3 v1, Vector3 v2, Vector3 v3, Color c1, Color c2, Color c3, Color texIndexes)
+    private void AddTriangle(SurfaceTool surfaceTool, Vector3 v1, Vector3 v2, Vector3 v3, 
+        Color c1, Color c2, Color c3, 
+        Vector2 uv0, Vector2 uv1, Vector2 uv2,
+        Color texIndexes)
     {
         surfaceTool.SetColor(c1);
+        surfaceTool.SetUV(uv0);
         surfaceTool.SetCustom(0, texIndexes);
         surfaceTool.AddVertex(v1);
         
         surfaceTool.SetColor(c2);
+        surfaceTool.SetUV(uv1);
         surfaceTool.SetCustom(0, texIndexes);
         surfaceTool.AddVertex(v2);
 
         surfaceTool.SetColor(c3);
+        surfaceTool.SetUV(uv2);
         surfaceTool.SetCustom(0, texIndexes);
         surfaceTool.AddVertex(v3);
     }

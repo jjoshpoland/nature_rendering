@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://rovn20obd8sv"]
+
+[ext_resource type="Script" path="res://InfiniteOcean/OceanPosTracker.gd" id="1_8sbpx"]
+
+[node name="OceanPosTracker" type="Node3D"]
+script = ExtResource("1_8sbpx")
