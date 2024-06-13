@@ -1,7 +1,62 @@
-[gd_resource type="ShaderMaterial" load_steps=2 format=3 uid="uid://cjjt47pif1vtk"]
+[gd_resource type="ShaderMaterial" load_steps=8 format=3 uid="uid://cjjt47pif1vtk"]
 
 [ext_resource type="Shader" path="res://InfiniteOcean/Water.gdshader" id="1_ec200"]
+
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_mf4xf"]
+noise_type = 3
+frequency = 0.032
+
+[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_sk5na"]
+seamless = true
+as_normal_map = true
+bump_strength = 1.6
+noise = SubResource("FastNoiseLite_mf4xf")
+
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_y0sdm"]
+noise_type = 0
+seed = 22
+frequency = 0.003
+fractal_lacunarity = 1.6
+fractal_gain = 0.47
+fractal_weighted_strength = 0.53
+
+[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_by5qx"]
+seamless = true
+seamless_blend_skirt = 0.532
+as_normal_map = true
+bump_strength = 21.8
+noise = SubResource("FastNoiseLite_y0sdm")
+
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_i7jbj"]
+noise_type = 4
+fractal_type = 2
+fractal_gain = 0.34
+fractal_weighted_strength = 0.6
+
+[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_k5tex"]
+seamless = true
+noise = SubResource("FastNoiseLite_i7jbj")
 
 [resource]
 render_priority = 0
 shader = ExtResource("1_ec200")
+shader_parameter/albedo = Color(6.01634e-07, 0.188434, 0.259841, 1)
+shader_parameter/albedo2 = Color(0, 0.159003, 0.277214, 1)
+shader_parameter/metallic = 0.0
+shader_parameter/roughness = 0.02
+shader_parameter/wave_direction = Vector2(0.5, -0.2)
+shader_parameter/wave_direction2 = Vector2(-0.5, 0.5)
+shader_parameter/time_scale = 0.1
+shader_parameter/noise_scale = 20.0
+shader_parameter/height_scale = 2.0
+shader_parameter/color_deep = Color(0.11, 0.29, 0.33, 1)
+shader_parameter/color_shallow = Color(3.85046e-07, 0.469589, 0.759361, 1)
+shader_parameter/beers_law = 2.0
+shader_parameter/depth_offset = 1.5
+shader_parameter/edge_scale = 0.3
+shader_parameter/near = 1.0
+shader_parameter/far = 2000.0
+shader_parameter/edge_color = Color(1, 1, 1, 1)
+shader_parameter/wave = SubResource("NoiseTexture2D_k5tex")
+shader_parameter/texture_normal = SubResource("NoiseTexture2D_sk5na")
+shader_parameter/texture_normal2 = SubResource("NoiseTexture2D_by5qx")
