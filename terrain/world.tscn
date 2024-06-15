@@ -12,3 +12,4 @@ chunk = ExtResource("2_cvmsj")
 
 [node name="heightmap" type="Node" parent="."]
 script = ExtResource("2_ssy5k")
+detailNoiseScale = 0.1

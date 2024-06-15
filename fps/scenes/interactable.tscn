@@ -1,0 +1,23 @@
+[gd_scene load_steps=4 format=3 uid="uid://6mq6bu7ytla5"]
+
+[ext_resource type="Script" path="res://fps/scripts/interactable.gd" id="1_ylgm6"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_yv410"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_2md2d"]
+
+[node name="Interactable" type="Area3D"]
+collision_layer = 8
+script = ExtResource("1_ylgm6")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("BoxShape3D_yv410")
+
+[node name="Label3D" type="Label3D" parent="."]
+visible = false
+billboard = 1
+no_depth_test = true
+text = "Interact"
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+mesh = SubResource("BoxMesh_2md2d")

@@ -6,14 +6,27 @@ using System.Diagnostics;
 public partial class NoiseMap : Node
 {
     [Export]
-    int Size = 256;
+    public int Size = 256;
     [Export]
     bool needsUpdate = false;
     [Export]
+    float detailNoiseScale = 0.01f;
+    [Export]
     Image map;
     [Export]
-	FastNoiseLite noise;
-
+	FastNoiseLite rNoise;
+    [Export]
+    FastNoiseLite gNoise;
+    [Export]
+    FastNoiseLite bNoise;
+    [Export]
+    FastNoiseLite detailNoise;
+    [Export]
+    Curve rNoiseCurve;
+    [Export]
+    Curve gNoiseCurve;
+    [Export]
+    Curve bNoiseCurve;
 
     public override void _Process(double delta)
     {
@@ -27,21 +40,33 @@ public partial class NoiseMap : Node
 
     public void Init(int size)
 	{
-        map = Image.Create(size, size, false, Image.Format.Rf);
+        map = Image.Create(size, size, false, Image.Format.Rgbaf);
         
 
         for (int x = 0; x < size; x++)
         {
             for (int y = 0; y < size; y++)
             {
-                float noiseValue = noise.GetNoise2D(x, y);
-                map.SetPixel(x, y, new Color(noiseValue, noiseValue, noiseValue));
+                float gValue = 0;
+                float bValue = 0;
+                float rValue = rNoiseCurve.Sample( (rNoise.GetNoise2D(x, y) + 1f) / 2f);
+                if (gNoise != null)
+                {
+                    gValue = gNoiseCurve.Sample((gNoise.GetNoise2D(x, y) + 1f) / 2f);
+                }
+                if (bNoise != null)
+                {
+                    bValue = bNoiseCurve.Sample((bNoise.GetNoise2D(x, y) + 1f) / 2f);
+                }
+                 
+                 
+                map.SetPixel(x, y, new Color(rValue, gValue, bValue));
             }
         }
     }
 
 
-    public float SampleMap(float x, float y, int worldSize)
+    public Color SampleMap(float x, float y, int worldSize)
     {
         int srcWidth = map.GetWidth();
         int srcHeight = map.GetHeight();
@@ -52,7 +77,9 @@ public partial class NoiseMap : Node
         int gxi = (int)gx;
         int gyi = (int)gy;
 
-        float height = 0.0f;
+        float r = 0.0f;
+        float g = 0.0f;
+        float b = 0.0f;
 
         for (int m = -1; m < 3; m++)
         {
@@ -61,16 +88,25 @@ public partial class NoiseMap : Node
                 int p = Mathf.Clamp(gxi + m, 0, srcWidth - 1);
                 int q = Mathf.Clamp(gyi + n, 0, srcHeight - 1);
 
-                float c = map.GetPixel(p, q).R;
+                float rp = map.GetPixel(p, q).R;
+                float gp = map.GetPixel(p, q).G;
+                float bp = map.GetPixel(p, q).B;
 
                 float wx = BicubicKernel(gx - (gxi + m));
                 float wy = BicubicKernel(gy - (gyi + n));
 
-                height += c * wx * wy;
+                r += rp * wx * wy;
+                g += gp * wx * wy;
+                b += bp * wx * wy;
             }
         }
 
-        return height;
+        if (detailNoise != null)
+        {
+            r += detailNoise.GetNoise2D(x, y) * detailNoiseScale;
+        }
+
+        return new Color(r,g,b);
     }
 
     private float BicubicKernel(float x)

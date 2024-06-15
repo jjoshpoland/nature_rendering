@@ -18,6 +18,10 @@ public partial class TerrainGenerator : Node3D
     [Export]
     public int baseResolution = 64;
     [Export]
+    public float localHeightDetailScale = .01f;
+    [Export]
+    public float specialHeightScale = 4f;
+    [Export]
     public float LODDist = 256f;
     [Export]
     public int LODLevels = 3;
@@ -26,12 +30,31 @@ public partial class TerrainGenerator : Node3D
     [Export]
     public NoiseMap HeightMap;
     [Export]
+    public NoiseMap SpecialHeightMap;
+    [Export]
     public ShaderMaterial TerrainMaterial;
+    [Export]
+    public int RockFaceTexture;
+    [Export]
+    public int SandTexture;
     [Export]
     public Image[] TerrainTextures;
     private Texture2DArray TerrainTextureArray;
     private QuadTreeNode quadTreeRoot;
     private Vector3 prevPlayerPos;
+
+    private int[,] climates = new int[10, 10] { 
+        /*dry*/                         /*wet*/
+/*cold*/{ 2, 2, 9, 9, 9, 9, 8, 8, 8, 7 }, 
+        { 2, 2, 9, 9, 9, 8, 8, 8, 7, 7 },
+        { 2, 2, 8, 8, 8, 8, 7, 6, 7, 7 },
+        { 2, 2, 8, 4, 3, 3, 6, 6, 6, 6 },
+        { 1, 5, 5, 4, 3, 6, 6, 6, 6, 6 },
+        { 1, 5, 5, 4, 3, 6, 6, 6, 6, 6 },
+        { 1, 1, 5, 4, 3, 3, 6, 6, 6, 6 },
+        { 1, 1, 5, 4, 3, 3, 6, 6, 6, 6 },
+        { 1, 1, 1, 5, 5, 5, 5, 6, 0, 0 },
+/*hot*/ { 1, 1, 1, 1, 5, 5, 6, 6, 0, 0 } };
     
 	// Called when the node enters the scene tree for the first time.
 	public override void _Ready()
@@ -44,6 +67,8 @@ public partial class TerrainGenerator : Node3D
         if (needsRegenerate)
         {
             Clear();
+            Generate();
+            UpdateLod(Player.GlobalPosition);
             needsRegenerate = false;
         }
         if (!needsUpdate) return;
@@ -63,6 +88,8 @@ public partial class TerrainGenerator : Node3D
         TerrainTextureArray = new Texture2DArray();
         TerrainTextureArray.CreateFromImages(new Godot.Collections.Array<Image>(TerrainTextures));
         TerrainMaterial.SetShaderParameter("texture_array", TerrainTextureArray);
+        TerrainMaterial.SetShaderParameter("rock_face_texture", RockFaceTexture);
+        TerrainMaterial.SetShaderParameter("sand_texture", SandTexture);
         quadTreeRoot = new QuadTreeNode(0, LODDist, new Rect2(Vector2.Zero, new Vector2(Size, Size)));
         AddChild(quadTreeRoot);
         quadTreeRoot.Owner = this;
@@ -140,6 +167,8 @@ public partial class TerrainGenerator : Node3D
         int height = baseResolution / resolution;
 
         float[,] heightCache = new float[width, height];
+        float[,] heatCache = new float[width, height];
+        float[,] moistureCache = new float[width, height];
 
         for (int y = 0; y < height; y++)
         {
@@ -152,9 +181,12 @@ public partial class TerrainGenerator : Node3D
                 //    fx = x / (float)(width - 1);
                 //    fy = y / (float)(height - 1);
                 //}
-                heightCache[x, y] = HeightMap.SampleMap(bounds.Position.X + fx * bounds.Size.X, bounds.Position.Y + fy * bounds.Size.Y, Size);
-                //Vertex vertex = new Vertex(new Vector3(bounds.Position.X + fx * bounds.Size.X, heightValue * MaxHeight, bounds.Position.Y + fy * bounds.Size.Y), new Vector2I(x, y));
-                //vertices.Add(vertex);
+
+                Color env = HeightMap.SampleMap(bounds.Position.X + fx * bounds.Size.X, bounds.Position.Y + fy * bounds.Size.Y, Size);
+                Color heightAdd = SpecialHeightMap.SampleMap(bounds.Position.X + fx * bounds.Size.X, bounds.Position.Y + fy * bounds.Size.Y, Size);
+                heightCache[x, y] = (env.R + (heightAdd.R * specialHeightScale)) * (.5f - heightAdd.G);
+                heatCache[x,y] = env.G * Mathf.Clamp(2f - heightCache[x,y], .25f, 1f);
+                moistureCache[x,y] = (env.B * 0.75f) + (heightAdd.G * 0.25f);
             }
         }
 
@@ -170,14 +202,12 @@ public partial class TerrainGenerator : Node3D
                 Vector3 v2 = new Vector3(bounds.Position.X + fx * bounds.Size.X, heightCache[x, y + 1] * MaxHeight, bounds.Position.Y + (fy + 1.0f / (height - 2)) * bounds.Size.Y);
                 Vector3 v3 = new Vector3(bounds.Position.X + (fx + 1.0f / (width - 2)) * bounds.Size.X, heightCache[x + 1, y + 1] * MaxHeight, bounds.Position.Y + (fy + 1.0f / (height - 2)) * bounds.Size.Y);
 
-                //Get the texture at each vertex
-                //int tex0 = texCache[v0.x, v0.z]
-                //int tex1 = texCache...
 
-                int tex0 = 0;
-                int tex1 = 0;
-                int tex2 = 0;   
-                int tex3 = 0;
+                
+                int tex0 = climates[Mathf.RoundToInt(heatCache[x, y] * 9),Mathf.RoundToInt(moistureCache[x, y] * 9)];
+                int tex1 = climates[Mathf.RoundToInt(heatCache[x + 1, y] * 9), Mathf.RoundToInt(moistureCache[x + 1, y] * 9)];
+                int tex2 = climates[Mathf.RoundToInt(heatCache[x, y + 1] * 9), Mathf.RoundToInt(moistureCache[x, y + 1] * 9)];   
+                int tex3 = climates[Mathf.RoundToInt(heatCache[x + 1, y + 1] * 9), Mathf.RoundToInt(moistureCache[x + 1, y + 1] * 9)];
 
                 Vector2 uv0 = new Vector2(v0.X / bounds.Size.X, v0.Z / bounds.Size.Y);
                 Vector2 uv1 = new Vector2(v1.X / bounds.Size.X, v1.Z / bounds.Size.Y);
@@ -185,12 +215,12 @@ public partial class TerrainGenerator : Node3D
                 Vector2 uv3 = new Vector2(v3.X / bounds.Size.X, v3.Z / bounds.Size.Y);
 
                 // First triangle of the quad
-                AddTriangle(surfaceTool, v0, v1, v2, new Color(1, 0, 0), new Color(0, 0, 1), new Color(0, 1, 0), 
+                AddTriangle(surfaceTool, v0, v1, v2, new Color(1, 0, 0), new Color(0, 1, 0), new Color(0, 0, 1), 
                     uv0, uv1, uv2, 
                     new Color(tex0, tex1, tex2));
 
                 // Second triangle of the quad
-                AddTriangle(surfaceTool, v2, v1, v3, new Color(1, 0, 0), new Color(0, 0, 1), new Color(0, 1, 0), 
+                AddTriangle(surfaceTool, v2, v1, v3, new Color(1, 0, 0), new Color(0, 1, 0), new Color(0, 0, 1), 
                     uv2, uv1, uv3, 
                     new Color(tex2, tex1, tex3));
             }
@@ -239,9 +269,13 @@ public partial class TerrainGenerator : Node3D
             {
                 node.LodMeshes[lodLevel] = GenerateLodMesh(node.Bounds, lodLevel);
                 node.LodGenerated[lodLevel] = true;
+                node.MeshInstance.Mesh = node.LodMeshes[lodLevel];
+                if (lodLevel == 0)
+                {
+                    node.MeshInstance.CreateTrimeshCollision();
+                }
             }
-
-            if (node.MeshInstance.Mesh != node.LodMeshes[lodLevel])
+            else if (node.MeshInstance.Mesh != node.LodMeshes[lodLevel])
             {
                 node.MeshInstance.Mesh = node.LodMeshes[lodLevel];
             }
@@ -271,5 +305,10 @@ public partial class TerrainGenerator : Node3D
             Position = position;
             Coords = coords;
         }
+    }
+
+    private enum Climate
+    {
+        None = 0, Sand = 1, Rock = 2, Grass = 3, Grass2 = 4, DryGrass = 5, Forest = 6, Taiga = 7, Tundra = 8, Snow = 9
     }
 }

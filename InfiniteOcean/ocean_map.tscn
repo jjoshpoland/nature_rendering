@@ -1,7 +1,9 @@
-[gd_scene load_steps=2 format=3 uid="uid://d1gbccf48ffk8"]
+[gd_scene load_steps=3 format=3 uid="uid://d1gbccf48ffk8"]
 
 [ext_resource type="PackedScene" uid="uid://bbdypic336ono" path="res://InfiniteOcean/ocean.tscn" id="1_1wuba"]
+[ext_resource type="Script" path="res://InfiniteOcean/ocean_map.gd" id="1_w27oj"]
 
 [node name="OceanMap" type="Node3D"]
+script = ExtResource("1_w27oj")
 
 [node name="Ocean" parent="." instance=ExtResource("1_1wuba")]

@@ -1,0 +1,46 @@
+[gd_scene load_steps=5 format=3 uid="uid://cdnx6ml6fq25t"]
+
+[ext_resource type="Script" path="res://fps/scripts/player.gd" id="1_dmhq8"]
+[ext_resource type="Script" path="res://fps/scripts/interactor.gd" id="2_hgq88"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_m0ui3"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_4q074"]
+
+[node name="Player" type="CharacterBody3D"]
+script = ExtResource("1_dmhq8")
+
+[node name="StandingCollisionShape" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+shape = SubResource("CapsuleShape3D_m0ui3")
+
+[node name="CrouchingCollisionShape" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+shape = SubResource("CapsuleShape3D_4q074")
+disabled = true
+
+[node name="StandingRoomChecker" type="RayCast3D" parent="."]
+target_position = Vector3(0, 1.8, 0)
+
+[node name="Neck" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.8, 0)
+
+[node name="Head" type="Node3D" parent="Neck"]
+
+[node name="Camera3D" type="Camera3D" parent="Neck/Head"]
+
+[node name="InteractionRay" type="RayCast3D" parent="Neck/Head/Camera3D"]
+target_position = Vector3(0, 0, -2)
+collision_mask = 8
+collide_with_areas = true
+collide_with_bodies = false
+script = ExtResource("2_hgq88")
+
+[node name="3DLabelCam" type="Camera3D" parent="Neck/Head/Camera3D"]
+visible = false
+cull_mask = 2
+
+[node name="Slide_Timer" type="Timer" parent="."]
+one_shot = true
+
+[connection signal="timeout" from="Slide_Timer" to="." method="_end_slide"]
