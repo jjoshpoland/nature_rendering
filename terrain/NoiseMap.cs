@@ -12,7 +12,7 @@ public partial class NoiseMap : Node
     [Export]
     float detailNoiseScale = 0.01f;
     [Export]
-    Image map;
+    public Image map;
     [Export]
 	FastNoiseLite rNoise;
     [Export]
@@ -109,7 +109,45 @@ public partial class NoiseMap : Node
         return new Color(r,g,b);
     }
 
-    private float BicubicKernel(float x)
+    public static Color SampleImage(Image image, float x, float y, int worldSize)
+    {
+        int srcWidth = image.GetWidth();
+        int srcHeight = image.GetHeight();
+
+        float gx = (x / worldSize) * (srcWidth - 1);
+        float gy = (y / worldSize) * (srcHeight - 1);
+
+        int gxi = (int)gx;
+        int gyi = (int)gy;
+
+        float r = 0.0f;
+        float g = 0.0f;
+        float b = 0.0f;
+
+        for (int m = -1; m < 3; m++)
+        {
+            for (int n = -1; n < 3; n++)
+            {
+                int p = Mathf.Clamp(gxi + m, 0, srcWidth - 1);
+                int q = Mathf.Clamp(gyi + n, 0, srcHeight - 1);
+
+                float rp = image.GetPixel(p, q).R;
+                float gp = image.GetPixel(p, q).G;
+                float bp = image.GetPixel(p, q).B;
+
+                float wx = BicubicKernel(gx - (gxi + m));
+                float wy = BicubicKernel(gy - (gyi + n));
+
+                r += rp * wx * wy;
+                g += gp * wx * wy;
+                b += bp * wx * wy;
+            }
+        }
+
+        return new Color(r, g, b);
+    }
+
+    public static float BicubicKernel(float x)
     {
         float a = -0.5f;
         x = Mathf.Abs(x);

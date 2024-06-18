@@ -1,0 +1,18 @@
+[gd_resource type="StandardMaterial3D" load_steps=2 format=3 uid="uid://c0t0yktjh5bhl"]
+
+[ext_resource type="Texture2D" uid="uid://dxk4j0ojjjqbh" path="res://details/GrassWhite.png" id="1_1cwk4"]
+
+[resource]
+transparency = 2
+alpha_scissor_threshold = 0.5
+alpha_antialiasing_mode = 0
+cull_mode = 2
+diffuse_mode = 2
+albedo_color = Color(0.210351, 0.474302, 0.174116, 1)
+albedo_texture = ExtResource("1_1cwk4")
+metallic_specular = 0.0
+texture_filter = 0
+texture_repeat = false
+distance_fade_mode = 2
+distance_fade_min_distance = 256.74
+distance_fade_max_distance = 0.0

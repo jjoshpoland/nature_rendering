@@ -18,7 +18,7 @@ varying vec3 world_norm;
 void vertex() {
 	textures = CUSTOM0.xyz;
 	world_pos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
-	NORMAL = normalize((INV_VIEW_MATRIX * vec4(NORMAL, 0.0)).xyz);
+	//NORMAL = normalize((INV_VIEW_MATRIX * vec4(NORMAL, 0.0)).xyz);
 	
 }
 
@@ -32,7 +32,10 @@ void fragment() {
     float index2 = textures.z;
 	ROUGHNESS = 1.0;
 	METALLIC = 0.0;
-	float slope = abs(dot(NORMAL, vec3(0.0, 1.0, 0.0)));
+	SPECULAR = 0.0;
+	//vec3 normal = normalize(NORMAL);
+	//vec3 world_normal = normalize((MODEL_NORMAL_MATRIX * vec3(normal)).xyz);
+	float slope = abs(dot(normalize((INV_VIEW_MATRIX * vec4(NORMAL, 0.0)).xyz), vec3(0.0, 1.0, 0.0)));
 	
 	//if(slope < slope_threshold) {
 		//index0 = rock_face_texture;

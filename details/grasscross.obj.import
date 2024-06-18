@@ -1,0 +1,22 @@
+[remap]
+
+importer="wavefront_obj"
+importer_version=1
+type="Mesh"
+uid="uid://rgcodncscf5n"
+path="res://.godot/imported/grasscross.obj-a000db1c42d36d7a51fe5fdc6e0fa4f1.mesh"
+
+[deps]
+
+files=["res://.godot/imported/grasscross.obj-a000db1c42d36d7a51fe5fdc6e0fa4f1.mesh"]
+
+source_file="res://details/grasscross.obj"
+dest_files=["res://.godot/imported/grasscross.obj-a000db1c42d36d7a51fe5fdc6e0fa4f1.mesh", "res://.godot/imported/grasscross.obj-a000db1c42d36d7a51fe5fdc6e0fa4f1.mesh"]
+
+[params]
+
+generate_tangents=true
+scale_mesh=Vector3(1, 1, 1)
+offset_mesh=Vector3(0, 0, 0)
+optimize_mesh=true
+force_disable_mesh_compression=false
