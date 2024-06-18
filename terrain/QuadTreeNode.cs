@@ -15,7 +15,7 @@ public partial class QuadTreeNode : Node3D
     public int GrassInstances;
     public MultiMesh GrassMultiMesh;
     public MultiMeshInstance3D GrassMultiMeshInstance;
-    public Queue<Transform3D> grassTransformQueue;
+    public Queue<Vector2I> grassCoordsQueue;
 
     public QuadTreeNode(int level, float lodDist, Rect2 bounds)
     {
@@ -28,7 +28,7 @@ public partial class QuadTreeNode : Node3D
         LODDist = lodDist;
         GrassMultiMesh = new MultiMesh();
         GrassMultiMeshInstance = new MultiMeshInstance3D();
-        grassTransformQueue = new Queue<Transform3D>();
+        grassCoordsQueue = new Queue<Vector2I>();
     }
 
     public QuadTreeNode()
@@ -41,7 +41,7 @@ public partial class QuadTreeNode : Node3D
         LodGenerated = new List<bool>();
         MeshInstance = new MeshInstance3D();
         GrassMultiMeshInstance = new MultiMeshInstance3D();
-        grassTransformQueue = new Queue<Transform3D>();
+        grassCoordsQueue = new Queue<Vector2I>();
     }
 
     public void Subdivide()

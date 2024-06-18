@@ -33,8 +33,8 @@ public partial class TerrainGenerator : Node3D
     public NoiseMap HeightMap;
     [Export]
     public NoiseMap SpecialHeightMap;
-    [Export(PropertyHint.Range, "0.0, 1.0")]
-    public float GrassDensity;
+    [Export]
+    public int GrassDensity = 256;
     [Export]
     public NoiseMap DetailMap;
     [Export]
@@ -54,7 +54,7 @@ public partial class TerrainGenerator : Node3D
     private Vector3 prevPlayerPos;
     private MultiMesh grassMultiMesh;
     private MultiMeshInstance3D grassMultiMeshInstance;
-    private const int GRASS_BATCH_SIZE = 1024;
+    private const int GRASS_BATCH_SIZE = 128;
     
 
     private int[,] climates = new int[10, 10] { 
@@ -152,19 +152,6 @@ public partial class TerrainGenerator : Node3D
         }
     }
 
-    private List<Mesh> GenerateLodMeshes(Rect2 bounds)
-    {
-        var lodMeshes = new List<Mesh>();
-        int lodLevels = LODLevels;  // Number of LOD levels
-        for (int lod = 0; lod < lodLevels; lod++)
-        {
-            int resolution = (int)Math.Pow(2, lod);
-            var mesh = GenerateMesh(bounds, resolution);
-            
-            lodMeshes.Add(mesh);
-        }
-        return lodMeshes;
-    }
 
     private void InitializeGrassMultiMesh(QuadTreeNode node)
     {
@@ -215,7 +202,7 @@ public partial class TerrainGenerator : Node3D
 
                 Color env = HeightMap.SampleMap(bounds.Position.X + fx * bounds.Size.X, bounds.Position.Y + fy * bounds.Size.Y, Size);
                 Color heightAdd = SpecialHeightMap.SampleMap(bounds.Position.X + fx * bounds.Size.X, bounds.Position.Y + fy * bounds.Size.Y, Size);
-                heightCache[x, y] = (env.R + (heightAdd.R * specialHeightScale)) * (.5f - heightAdd.G);
+                heightCache[x, y] = (env.R + (heightAdd.R * specialHeightScale)) * (.75f - heightAdd.G);
                 heatCache[x,y] = env.G * Mathf.Clamp(2f - heightCache[x,y], .25f, 1f);
                 moistureCache[x,y] = (env.B * 0.75f) + (heightAdd.G * 0.25f);
             }
@@ -274,53 +261,53 @@ public partial class TerrainGenerator : Node3D
         return mesh; 
     }
 
-    private void ScatterGrass(ref Queue<Transform3D> grassTransforms, Rect2 bounds)
+    private void ScatterGrass(ref Queue<Vector2I> grassCoords, Rect2 bounds)
     {
-        int grassResolution = 256; // Higher resolution for grass scattering
+        int grassResolution = GrassDensity; // Higher resolution for grass scattering
         for (int y = 0; y < grassResolution; y++)
         {
             for (int x = 0; x < grassResolution; x++)
             {
-                float fx = x / (float)(grassResolution - 1);
-                float fy = y / (float)(grassResolution - 1);
-                float sampleX = bounds.Position.X + fx * bounds.Size.X;
-                float sampleY = bounds.Position.Y + fy * bounds.Size.Y;
-
-                Color grassProbability = DetailMap.SampleMap(sampleX, sampleY, Size);
+                grassCoords.Enqueue(new Vector2I(x, y));
                 
-                
-                if (grassProbability.R > .25)
-                {
-                    float heightValue = SampleHeightmap(sampleX, sampleY, Size);
-                    Vector3 grassPosition = new Vector3(sampleX + (((grassProbability.G * 2f) -1f) * 2f), (heightValue * MaxHeight), sampleY + (((grassProbability.B * 2f) - 1f)) * 2f);
-                    Transform3D grassTransform = new Transform3D(Basis.Identity, grassPosition);
-                    grassTransform = grassTransform.RotatedLocal(new Vector3(0, 1f, 0), Mathf.DegToRad(grassProbability.G * 180));
-                    grassTransforms.Enqueue(grassTransform);
-                }
             }
         }
     }
 
-    private void UpdateGrassMultiMesh(QuadTreeNode node, ref Queue<Transform3D> grassTransforms)
+    private void UpdateGrassMultiMesh(QuadTreeNode node, ref Queue<Vector2I> grassCoords)
     {
-        List<Transform3D> queuedGrassTransforms = new List<Transform3D>();
-        if (!grassTransforms.Any()) { return; }
+        List<Transform3D> grassTransforms = new List<Transform3D>();
+        int grassResolution = GrassDensity;
+        if (!grassCoords.Any()) { return; }
         
-        GD.Print(grassTransforms.Count);
-        GD.Print("grass instances: " + node.GrassInstances);
-        GD.Print(node.GrassMultiMesh.InstanceCount);
-        for (int i = 0; i < GRASS_BATCH_SIZE && grassTransforms.Count > 0; i++)
+        for (int i = 0; i < GRASS_BATCH_SIZE && grassCoords.Count > 0; i++)
         {
-            queuedGrassTransforms.Add(grassTransforms.Dequeue());
+            Vector2I grassCoord = grassCoords.Dequeue();
+            float fx = grassCoord.X / (float)(grassResolution - 1);
+            float fy = grassCoord.Y / (float)(grassResolution - 1);
+            float sampleX = node.Bounds.Position.X + fx * node.Bounds.Size.X;
+            float sampleY = node.Bounds.Position.Y + fy * node.Bounds.Size.Y;
+
+            Color grassProbability = DetailMap.SampleMap(sampleX, sampleY, Size);
+
+
+            if (grassProbability.R > .25)
+            {
+                float heightValue = SampleHeightmap(sampleX, sampleY, Size);
+                Vector3 grassPosition = new Vector3(sampleX + (((grassProbability.G * 2f) - 1f) * 3f), (heightValue * MaxHeight), sampleY + (((grassProbability.B * 2f) - 1f)) * 3f);
+                Transform3D grassTransform = new Transform3D(Basis.Identity, grassPosition);
+                grassTransform = grassTransform.RotatedLocal(new Vector3(0, 1f, 0), Mathf.DegToRad(grassProbability.G * 180));
+                grassTransforms.Add(grassTransform);
+            }
+            
         }
 
-        GD.Print(queuedGrassTransforms.Count);
 
-        for (int j = node.GrassInstances, k = 0; k < queuedGrassTransforms.Count; j++, k++)
+        for (int j = node.GrassInstances, k = 0; k < grassTransforms.Count; j++, k++)
         {
             try
             {
-                node.GrassMultiMesh.SetInstanceTransform(j, queuedGrassTransforms[k]);
+                node.GrassMultiMesh.SetInstanceTransform(j, grassTransforms[k]);
             }
             catch (Exception e) 
             {
@@ -336,7 +323,7 @@ public partial class TerrainGenerator : Node3D
     {
         Color env = HeightMap.SampleMap(sampleX, sampleY, size);
         Color heightAdd = SpecialHeightMap.SampleMap(sampleX, sampleY, size);
-        env.R = (env.R + (heightAdd.R * specialHeightScale)) * (.5f - heightAdd.G);
+        env.R = (env.R + (heightAdd.R * specialHeightScale)) * (.75f - heightAdd.G);
         return env.R;
     }
 
@@ -382,9 +369,9 @@ public partial class TerrainGenerator : Node3D
                     GD.Print("doing grass");
                     
                     InitializeGrassMultiMesh(node);
-                    node.GrassMultiMesh.InstanceCount = 256 * 256;
-                    node.GrassMultiMesh.VisibleInstanceCount = 256 * 256;
-                    ScatterGrass(ref node.grassTransformQueue, node.Bounds);
+                    node.GrassMultiMesh.InstanceCount = GrassDensity * GrassDensity;
+                    node.GrassMultiMesh.VisibleInstanceCount = GrassDensity * GrassDensity;
+                    ScatterGrass(ref node.grassCoordsQueue, node.Bounds);
                     
                     
                     node.GrassMultiMeshInstance.Multimesh = node.GrassMultiMesh;
@@ -412,7 +399,7 @@ public partial class TerrainGenerator : Node3D
 
             if(lodLevel == 0)
             {
-                UpdateGrassMultiMesh(node, ref node.grassTransformQueue);
+                UpdateGrassMultiMesh(node, ref node.grassCoordsQueue);
             }
 
 
