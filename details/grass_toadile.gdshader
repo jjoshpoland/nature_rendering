@@ -50,24 +50,17 @@ uniform bool displace = true;
 uniform float alpha_scissors : hint_range(0, 1) = 0.9;
 uniform bool use_normal_map_alpha = false;
 
-//Splat/height maps
-global uniform sampler2DArray height_maps;
-instance uniform int map_index;
-
 // variables
 varying float bend_uv_direction;
 varying vec3 instance_offset;
 varying float fade;
 
 void vertex() {
-	float base_height = texture(height_maps, vec3(VERTEX.xz / 512.0, float(map_index))).r * 100.0;
-	VERTEX.y += base_height;
 	// set up grass
-	//VERTEX.y *= height;
-	//VERTEX.y += y_offset*height;
+	VERTEX.y *= height;
+	VERTEX.y += y_offset*height;
 	float inverse_uv_y = 1.0-UV.y;
 	COLOR = base_color*vec4(UV.y) + end_color*vec4(inverse_uv_y);
-	COLOR = texture(height_maps, vec3(UV, float(map_index)));
 	
 	// "h" means height
 	float h_variation = float(INSTANCE_ID % 3)*height_variation*0.5;
@@ -133,29 +126,28 @@ void fragment() {
 	float prox = 1.0;
 	
 	// comment out this if-block if not wanting to use displacement and wanting SSAO
-	//if (displace)
-	//{
-		//float depth_tex = textureLod(DEPTH_TEXTURE,SCREEN_UV,0.0).r;
-		//vec4 world_pos = INV_PROJECTION_MATRIX * vec4(SCREEN_UV*2.0-1.0,depth_tex*2.0-1.0,1.0);
-		//world_pos.xyz/=world_pos.w;
-		//float stuff = clamp(1.0-smoothstep(world_pos.z+0.5,world_pos.z,VERTEX.z), 0.3, 1.1);
-		//prox = clamp(1.0-smoothstep(world_pos.z+proximity_distance,world_pos.z,VERTEX.z) + UV.y*proximity_distance,0.0,1.0);
-		//base_uv.x += (1.0-prox)*0.2*displace_intensity * bend_uv_direction;
-		//base_uv.y -= (1.0-prox)*0.5*displace_intensity;
-	//}
+	if (displace)
+	{
+		float depth_tex = textureLod(DEPTH_TEXTURE,SCREEN_UV,0.0).r;
+		vec4 world_pos = INV_PROJECTION_MATRIX * vec4(SCREEN_UV*2.0-1.0,depth_tex*2.0-1.0,1.0);
+		world_pos.xyz/=world_pos.w;
+		float stuff = clamp(1.0-smoothstep(world_pos.z+0.5,world_pos.z,VERTEX.z), 0.3, 1.1);
+		prox = clamp(1.0-smoothstep(world_pos.z+proximity_distance,world_pos.z,VERTEX.z) + UV.y*proximity_distance,0.0,1.0);
+		base_uv.x += (1.0-prox)*0.2*displace_intensity * bend_uv_direction;
+		base_uv.y -= (1.0-prox)*0.5*displace_intensity;
+	}
 	vec4 albedo_tex = texture(texture_albedo,vec2(base_uv.x, base_uv.y));
 	vec4 normal_tex = texture(texture_normal,vec2(base_uv.x, base_uv.y));
 	
 	// discard distant grass
-	//if (!use_normal_map_alpha && albedo_tex.a < alpha_scissors)
-	//{
-		//discard;
-	//} else if (use_normal_map_alpha && normal_tex.a < alpha_scissors)
-	//{
-		//discard;
-	//}
-	ALPHA = albedo_tex.a;
-	ALPHA_SCISSOR_THRESHOLD = alpha_scissors;
+	if (!use_normal_map_alpha && albedo_tex.a < alpha_scissors)
+	{
+		discard;
+	} else if (use_normal_map_alpha && normal_tex.a < alpha_scissors)
+	{
+		discard;
+	}
+	
 	ALBEDO = COLOR.rgb * albedo_tex.rgb * (1.0 + instance_offset) * prox;
 	METALLIC = metallic;
 	ROUGHNESS = roughness;
