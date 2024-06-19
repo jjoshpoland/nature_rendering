@@ -13,9 +13,10 @@ public partial class QuadTreeNode : Node3D
     public List<bool> LodGenerated { get; private set; }
     public float LODDist {  get; private set; }
     public int GrassInstances;
-    public MultiMesh GrassMultiMesh;
     public MultiMeshInstance3D GrassMultiMeshInstance;
     public Queue<Vector2I> grassCoordsQueue;
+    public Image heightMap;
+    public Image climateMap;
 
     public QuadTreeNode(int level, float lodDist, Rect2 bounds)
     {
@@ -26,7 +27,6 @@ public partial class QuadTreeNode : Node3D
         MeshInstance = new MeshInstance3D();
         LodGenerated = new List<bool>();
         LODDist = lodDist;
-        GrassMultiMesh = new MultiMesh();
         GrassMultiMeshInstance = new MultiMeshInstance3D();
         grassCoordsQueue = new Queue<Vector2I>();
     }
@@ -56,6 +56,7 @@ public partial class QuadTreeNode : Node3D
                 QuadTreeNode childNode = new QuadTreeNode(Level + 1, LODDist, childBounds);
                 Children.Add(childNode);
                 AddChild(childNode);
+                GlobalPosition = new Vector3(Bounds.Position.X + offset.X, 0, Bounds.Position.Y + offset.Y);
                 childNode.Owner = this;
             }
         }
