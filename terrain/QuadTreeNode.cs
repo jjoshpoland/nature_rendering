@@ -12,9 +12,11 @@ public partial class QuadTreeNode : Node3D
     public List<Mesh> LodMeshes { get;  set; }
     public List<bool> LodGenerated { get; private set; }
     public float LODDist {  get; private set; }
-    public int GrassInstances;
-    public MultiMesh GrassMultiMesh;
-    public MultiMeshInstance3D GrassMultiMeshInstance;
+    //public int GrassInstances;
+    public MultiMesh[,] GrassMultiMesh;
+    public MultiMeshInstance3D[,] GrassMultiMeshInstance;
+    public int[,] grassInstanceCounts;
+    public Image ClimateMap;
     public Queue<Vector2I> grassCoordsQueue;
 
     public QuadTreeNode(int level, float lodDist, Rect2 bounds)
@@ -26,9 +28,20 @@ public partial class QuadTreeNode : Node3D
         MeshInstance = new MeshInstance3D();
         LodGenerated = new List<bool>();
         LODDist = lodDist;
-        GrassMultiMesh = new MultiMesh();
-        GrassMultiMeshInstance = new MultiMeshInstance3D();
+        GrassMultiMesh = new MultiMesh[10,10];
+        GrassMultiMeshInstance = new MultiMeshInstance3D[10, 10];
+        grassInstanceCounts = new int[10, 10];
+
         grassCoordsQueue = new Queue<Vector2I>();
+        for (int x = 0; x < 10; x++)
+        {
+            for (int y = 0; y < 10; y++)
+            {
+                GrassMultiMesh[x, y] = new MultiMesh();
+                GrassMultiMeshInstance[x, y] = new MultiMeshInstance3D();
+                grassInstanceCounts[x, y] = 0;
+            }
+        }
     }
 
     public QuadTreeNode()
@@ -39,8 +52,9 @@ public partial class QuadTreeNode : Node3D
         Children = new List<QuadTreeNode>();
         LodMeshes = new List<Mesh>();
         LodGenerated = new List<bool>();
-        MeshInstance = new MeshInstance3D();
-        GrassMultiMeshInstance = new MultiMeshInstance3D();
+        GrassMultiMesh = new MultiMesh[10, 10];
+        GrassMultiMeshInstance = new MultiMeshInstance3D[10, 10];
+        grassInstanceCounts = new int[10, 10];
         grassCoordsQueue = new Queue<Vector2I>();
     }
 

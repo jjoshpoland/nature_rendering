@@ -126,33 +126,34 @@ void fragment() {
 	float prox = 1.0;
 	
 	// comment out this if-block if not wanting to use displacement and wanting SSAO
-	if (displace)
-	{
-		float depth_tex = textureLod(DEPTH_TEXTURE,SCREEN_UV,0.0).r;
-		vec4 world_pos = INV_PROJECTION_MATRIX * vec4(SCREEN_UV*2.0-1.0,depth_tex*2.0-1.0,1.0);
-		world_pos.xyz/=world_pos.w;
-		float stuff = clamp(1.0-smoothstep(world_pos.z+0.5,world_pos.z,VERTEX.z), 0.3, 1.1);
-		prox = clamp(1.0-smoothstep(world_pos.z+proximity_distance,world_pos.z,VERTEX.z) + UV.y*proximity_distance,0.0,1.0);
-		base_uv.x += (1.0-prox)*0.2*displace_intensity * bend_uv_direction;
-		base_uv.y -= (1.0-prox)*0.5*displace_intensity;
-	}
+	//if (displace)
+	//{
+		//float depth_tex = textureLod(DEPTH_TEXTURE,SCREEN_UV,0.0).r;
+		//vec4 world_pos = INV_PROJECTION_MATRIX * vec4(SCREEN_UV*2.0-1.0,depth_tex*2.0-1.0,1.0);
+		//world_pos.xyz/=world_pos.w;
+		//float stuff = clamp(1.0-smoothstep(world_pos.z+0.5,world_pos.z,VERTEX.z), 0.3, 1.1);
+		//prox = clamp(1.0-smoothstep(world_pos.z+proximity_distance,world_pos.z,VERTEX.z) + UV.y*proximity_distance,0.0,1.0);
+		//base_uv.x += (1.0-prox)*0.2*displace_intensity * bend_uv_direction;
+		//base_uv.y -= (1.0-prox)*0.5*displace_intensity;
+	//}
 	vec4 albedo_tex = texture(texture_albedo,vec2(base_uv.x, base_uv.y));
 	vec4 normal_tex = texture(texture_normal,vec2(base_uv.x, base_uv.y));
 	
 	// discard distant grass
-	if (!use_normal_map_alpha && albedo_tex.a < alpha_scissors)
-	{
-		discard;
-	} else if (use_normal_map_alpha && normal_tex.a < alpha_scissors)
-	{
-		discard;
-	}
-	
+	//if (!use_normal_map_alpha && albedo_tex.a < alpha_scissors)
+	//{
+		//discard;
+	//} else if (use_normal_map_alpha && normal_tex.a < alpha_scissors)
+	//{
+		//discard;
+	//}
 	ALBEDO = COLOR.rgb * albedo_tex.rgb * (1.0 + instance_offset) * prox;
+	ALPHA = albedo_tex.a;
 	METALLIC = metallic;
 	ROUGHNESS = roughness;
 	SPECULAR = specular;
 	RIM = rim;
 	SSS_TRANSMITTANCE_COLOR = vec4(transmission);
 	NORMAL_MAP = normal_tex.rgb;
+	ALPHA_SCISSOR_THRESHOLD = alpha_scissors;
 }

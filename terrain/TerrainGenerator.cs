@@ -36,6 +36,8 @@ public partial class TerrainGenerator : Node3D
     [Export]
     public int GrassDensity = 256;
     [Export]
+    public float GrassProbability = .5f;
+    [Export]
     public NoiseMap DetailMap;
     [Export]
     public ShaderMaterial TerrainMaterial;
@@ -54,7 +56,7 @@ public partial class TerrainGenerator : Node3D
     private Vector3 prevPlayerPos;
     private MultiMesh grassMultiMesh;
     private MultiMeshInstance3D grassMultiMeshInstance;
-    private const int GRASS_BATCH_SIZE = 128;
+    private const int GRASS_BATCH_SIZE = 1024;
     
 
     private int[,] climates = new int[10, 10] { 
@@ -155,13 +157,25 @@ public partial class TerrainGenerator : Node3D
 
     private void InitializeGrassMultiMesh(QuadTreeNode node)
     {
-        node.GrassMultiMesh.TransformFormat = MultiMesh.TransformFormatEnum.Transform3D;
-        node.GrassMultiMesh.Mesh = GrassMesh;
         
 
-        node.GrassMultiMeshInstance.Multimesh = grassMultiMesh;
-        node.GrassMultiMeshInstance.MaterialOverride = GrassMaterial;
-        node.GrassMultiMeshInstance.VisibilityRangeFadeMode = GeometryInstance3D.VisibilityRangeFadeModeEnum.Self;
+        for(int x = 0; x < 10;x++)
+        {
+            for(int y = 0; y < 10;y++)
+            {
+                node.GrassMultiMesh[x, y].TransformFormat = MultiMesh.TransformFormatEnum.Transform3D;
+                node.GrassMultiMesh[x, y].Mesh = GrassMesh;
+                node.GrassMultiMesh[x, y].InstanceCount = (GrassDensity * GrassDensity) / 10;
+                node.GrassMultiMesh[x, y].VisibleInstanceCount = (GrassDensity * GrassDensity) / 10;
+
+                node.GrassMultiMeshInstance[x, y].Multimesh = grassMultiMesh;
+                node.GrassMultiMeshInstance[x, y].MaterialOverride = GrassMaterial;
+                node.GrassMultiMeshInstance[x, y].VisibilityRangeFadeMode = GeometryInstance3D.VisibilityRangeFadeModeEnum.Self;
+
+                
+            }
+        }
+        
 
     }
 
@@ -245,6 +259,11 @@ public partial class TerrainGenerator : Node3D
                 AddTriangle(surfaceTool, v2, v1, v3, new Color(1, 0, 0), new Color(0, 1, 0), new Color(0, 0, 1), 
                     uv2, uv1, uv3, 
                     new Color(tex2, tex1, tex3));
+
+                if (resolution == 2)
+                {
+
+                }
             }
         }
 
@@ -291,10 +310,10 @@ public partial class TerrainGenerator : Node3D
             Color grassProbability = DetailMap.SampleMap(sampleX, sampleY, Size);
 
 
-            if (grassProbability.R > .25)
+            if (grassProbability.R > 1f - GrassProbability)
             {
                 float heightValue = SampleHeightmap(sampleX, sampleY, Size);
-                Vector3 grassPosition = new Vector3(sampleX + (((grassProbability.G * 2f) - 1f) * 3f), (heightValue * MaxHeight), sampleY + (((grassProbability.B * 2f) - 1f)) * 3f);
+                Vector3 grassPosition = new Vector3(sampleX, (heightValue * MaxHeight), sampleY );
                 Transform3D grassTransform = new Transform3D(Basis.Identity, grassPosition);
                 grassTransform = grassTransform.RotatedLocal(new Vector3(0, 1f, 0), Mathf.DegToRad(grassProbability.G * 180));
                 grassTransforms.Add(grassTransform);
@@ -303,19 +322,29 @@ public partial class TerrainGenerator : Node3D
         }
 
 
-        for (int j = node.GrassInstances, k = 0; k < grassTransforms.Count; j++, k++)
+        for (int k = 0; k < grassTransforms.Count; k++)
         {
+            int x = (int)((grassTransforms[k].Origin.X - (node.Bounds.Position.X)) / (node.Bounds.Size.X / 9f));
+            int y = (int)((grassTransforms[k].Origin.Z - (node.Bounds.Position.Y)) / (node.Bounds.Size.Y / 9f));
             try
             {
-                node.GrassMultiMesh.SetInstanceTransform(j, grassTransforms[k]);
+                if (node.grassInstanceCounts[x, y] > node.GrassMultiMesh[x,y].InstanceCount)
+                {
+                    GD.Print("instance count over for x: " + x + ", y: " + y);
+                    continue;
+                }
+                node.GrassMultiMesh[x,y].SetInstanceTransform(node.grassInstanceCounts[x, y], grassTransforms[k]);
             }
             catch (Exception e) 
             {
                 GD.Print(e);
-                GD.Print("j: " + j + ", mm: " + node.GrassMultiMesh.InstanceCount);
+                GD.Print("x: " + x + ", y: " + y);
+                //GD.Print("j: " + j + ", mm: " + node.GrassMultiMesh.InstanceCount);
                 return;
             }
-            node.GrassInstances++;
+            node.grassInstanceCounts[x,y]++;
+
+            GD.Print(node.GrassMultiMeshInstance[x, y].GetAabb());
         }
     }
 
@@ -369,14 +398,27 @@ public partial class TerrainGenerator : Node3D
                     GD.Print("doing grass");
                     
                     InitializeGrassMultiMesh(node);
-                    node.GrassMultiMesh.InstanceCount = GrassDensity * GrassDensity;
-                    node.GrassMultiMesh.VisibleInstanceCount = GrassDensity * GrassDensity;
+                    
                     ScatterGrass(ref node.grassCoordsQueue, node.Bounds);
+
+                    float grassMMSize = node.Bounds.Size.X / 10f;
+                    Vector2 zeroPos = node.Bounds.Position - (node.Bounds.Size / 2f); // subtract halfsize to get zero corner
+
+                    for (int x = 0; x < 10; x++)
+                    {
+                        for (int y = 0; y < 10; y++)
+                        {
+                            node.GrassMultiMeshInstance[x,y].Multimesh = node.GrassMultiMesh[x, y];
+                            
+                            
+                            AddChild(node.GrassMultiMeshInstance[x, y]);
+                            node.GrassMultiMeshInstance[x, y].Owner = this;
+                            node.GrassMultiMeshInstance[x, y].CustomAabb = new Aabb(new Vector3(node.Bounds.Position.X - (node.Bounds.Size.X / 5f), 0, node.Bounds.Position.Y - (node.Bounds.Size.Y / 5f)), new Vector3(node.Bounds.Size.X / 5f, MaxHeight, node.Bounds.Size.Y / 5f));
+                            //node.GrassMultiMeshInstance[x, y].GlobalPosition = new Vector3(node.Bounds.Position.X + (x * grassMMSize), 0, node.Bounds.Position.Y + (grassMMSize * 10));
+                        }
+                    }
                     
                     
-                    node.GrassMultiMeshInstance.Multimesh = node.GrassMultiMesh;
-                    node.AddChild(node.GrassMultiMeshInstance);
-                    node.GrassMultiMeshInstance.Owner = node;
 
                 }
 
@@ -388,13 +430,27 @@ public partial class TerrainGenerator : Node3D
                     node.MeshInstance.CreateTrimeshCollision();
                     
                 }
-                node.GrassMultiMeshInstance.Visible = lodLevel == 0;
+
+                for (int x = 0; x < 10; x++)
+                {
+                    for (int y = 0; y < 10; y++)
+                    {
+                        node.GrassMultiMeshInstance[x, y].Visible = lodLevel == 0;
+                    }
+                }
+                        
 
             }
             else if (node.MeshInstance.Mesh != node.LodMeshes[lodLevel])
             {
                 node.MeshInstance.Mesh = node.LodMeshes[lodLevel];
-                node.GrassMultiMeshInstance.Visible = lodLevel == 0;
+                for (int x = 0; x < 10; x++)
+                {
+                    for (int y = 0; y < 10; y++)
+                    {
+                        node.GrassMultiMeshInstance[x, y].Visible = lodLevel == 0;
+                    }
+                }
             }
 
             if(lodLevel == 0)
