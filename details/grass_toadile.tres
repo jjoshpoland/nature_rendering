@@ -11,7 +11,7 @@ noise = SubResource("FastNoiseLite_6a6wq")
 [resource]
 render_priority = 0
 shader = ExtResource("1_vr5fo")
-shader_parameter/y_offset = 0.75
+shader_parameter/y_offset = 0.0
 shader_parameter/base_color = Color(0.19638, 0.424832, 0.15059, 1)
 shader_parameter/end_color = Color(0.201086, 0.481608, 0.14474, 1)
 shader_parameter/specular = 0.0
@@ -28,7 +28,7 @@ shader_parameter/color_variatiion = 0.5
 shader_parameter/height = 1.0
 shader_parameter/height_variation = 0.0
 shader_parameter/flatness = 0.0
-shader_parameter/fade_out_distance = 63.595
+shader_parameter/fade_out_distance = 30.0
 shader_parameter/fade_out_transition = 15.0
 shader_parameter/y_billboard = false
 shader_parameter/displace_intensity = 1.0

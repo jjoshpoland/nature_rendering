@@ -13,11 +13,8 @@ public partial class QuadTreeNode : Node3D
     public List<bool> LodGenerated { get; private set; }
     public float LODDist {  get; private set; }
     //public int GrassInstances;
-    public MultiMesh[,] GrassMultiMesh;
-    public MultiMeshInstance3D[,] GrassMultiMeshInstance;
-    public int[,] grassInstanceCounts;
+    public DetailChunk[,] GrassChunks;
     public Image ClimateMap;
-    public Queue<Vector2I> grassCoordsQueue;
 
     public QuadTreeNode(int level, float lodDist, Rect2 bounds)
     {
@@ -28,18 +25,16 @@ public partial class QuadTreeNode : Node3D
         MeshInstance = new MeshInstance3D();
         LodGenerated = new List<bool>();
         LODDist = lodDist;
-        GrassMultiMesh = new MultiMesh[10,10];
-        GrassMultiMeshInstance = new MultiMeshInstance3D[10, 10];
-        grassInstanceCounts = new int[10, 10];
-
-        grassCoordsQueue = new Queue<Vector2I>();
+        GrassChunks = new DetailChunk[10,10];
+        Vector2 detailChunkSize = bounds.Size / 10f;
         for (int x = 0; x < 10; x++)
         {
             for (int y = 0; y < 10; y++)
             {
-                GrassMultiMesh[x, y] = new MultiMesh();
-                GrassMultiMeshInstance[x, y] = new MultiMeshInstance3D();
-                grassInstanceCounts[x, y] = 0;
+                Vector2 pos = bounds.Position + new Vector2(x * detailChunkSize.X, y * detailChunkSize.Y);
+                GrassChunks[x, y] = new DetailChunk(new Rect2(pos, detailChunkSize));
+                GrassChunks[x, y].DetailMultiMesh = new MultiMesh();
+                GrassChunks[x, y].DetailMultiMeshInstance = new MultiMeshInstance3D();
             }
         }
     }
@@ -52,10 +47,7 @@ public partial class QuadTreeNode : Node3D
         Children = new List<QuadTreeNode>();
         LodMeshes = new List<Mesh>();
         LodGenerated = new List<bool>();
-        GrassMultiMesh = new MultiMesh[10, 10];
-        GrassMultiMeshInstance = new MultiMeshInstance3D[10, 10];
-        grassInstanceCounts = new int[10, 10];
-        grassCoordsQueue = new Queue<Vector2I>();
+        GrassChunks = new DetailChunk[10, 10];
     }
 
     public void Subdivide()
@@ -75,7 +67,22 @@ public partial class QuadTreeNode : Node3D
         }
     }
 
-
+    public void AddDetailChunksToTree(Node3D root)
+    {
+        for (int x = 0; x < 10; x++)
+        {
+            for (int y = 0; y < 10; y++)
+            {
+                AddChild(GrassChunks[x, y]);
+                GrassChunks[x, y].Owner = this;
+                GrassChunks[x, y].GlobalPosition = new Vector3(GrassChunks[x, y].Bounds.Position.X, 0, GrassChunks[x, y].Bounds.Position.Y);
+                GrassChunks[x,y].DetailMultiMeshInstance.Multimesh = GrassChunks[x,y].DetailMultiMesh;
+                GrassChunks[x, y].AddChild(GrassChunks[x, y].DetailMultiMeshInstance);
+                GrassChunks[x, y].DetailMultiMeshInstance.Owner = GrassChunks[x, y];
+                
+            }
+        }
+    }
 
     
 }
