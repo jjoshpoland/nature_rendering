@@ -317,7 +317,7 @@ public partial class TerrainGenerator : Node3D
             if (grassProbability.R > .25 && (climate == 3 || climate == 4))
             {
                 float heightValue = SampleHeightmap(sampleX, sampleY, Size);
-                Vector3 grassPosition = new Vector3(sampleX - node.Bounds.Position.X, (heightValue * MaxHeight), sampleY - node.Bounds.Position.Y);
+                Vector3 grassPosition = new Vector3(sampleX - node.Bounds.Position.X + ((grassProbability.B * 2f) - 1f), (heightValue * MaxHeight), sampleY - node.Bounds.Position.Y + ((grassProbability.G * 2f) - 1f));
                 Transform3D grassTransform = new Transform3D(Basis.Identity, grassPosition);
                 grassTransform = grassTransform.RotatedLocal(new Vector3(0, 1f, 0), Mathf.DegToRad(grassProbability.G * 180));
                 grassTransforms.Add(grassTransform);
