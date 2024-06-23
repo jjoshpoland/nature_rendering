@@ -16,6 +16,7 @@ public partial class QuadTreeNode : Node3D
     public MultiMesh GrassMultiMesh;
     public MultiMeshInstance3D GrassMultiMeshInstance;
     public Queue<Vector2I> grassCoordsQueue;
+    public Image ClimateMap;
 
     public QuadTreeNode(int level, float lodDist, Rect2 bounds)
     {

@@ -54,7 +54,7 @@ public partial class TerrainGenerator : Node3D
     private Vector3 prevPlayerPos;
     private MultiMesh grassMultiMesh;
     private MultiMeshInstance3D grassMultiMeshInstance;
-    private const int GRASS_BATCH_SIZE = 128;
+    private const int GRASS_BATCH_SIZE = 1024;
     
 
     private int[,] climates = new int[10, 10] { 
@@ -165,13 +165,13 @@ public partial class TerrainGenerator : Node3D
 
     }
 
-    private Mesh GenerateLodMesh(Rect2 bounds, int lod)
+    private Mesh GenerateLodMesh(QuadTreeNode node, Rect2 bounds, int lod)
     {
         int resolution = (int)Math.Pow(2, lod + 1);  // Ensure resolution is at least 2x2
-        return GenerateMesh(bounds, resolution);
+        return GenerateMesh(node, bounds, resolution);
     }
 
-    private Mesh GenerateMesh(Rect2 bounds, int resolution)
+    private Mesh GenerateMesh(QuadTreeNode node, Rect2 bounds, int resolution)
     {
         var surfaceTool = new SurfaceTool();
         var dataTool = new MeshDataTool();
@@ -186,7 +186,12 @@ public partial class TerrainGenerator : Node3D
         float[,] heightCache = new float[width, height];
         float[,] heatCache = new float[width, height];
         float[,] moistureCache = new float[width, height];
-        Image climateMap = Image.Create(width, height, false, Image.Format.Rgba8);
+        node.ClimateMap = Image.Create(width, height, false, Image.Format.Rgba8);
+        if(resolution == 1 && width != bounds.Size.X)
+        {
+            GD.Print(width);
+            GD.Print(bounds.Size.X);
+        }
 
         for (int y = 0; y < height; y++)
         {
@@ -223,13 +228,30 @@ public partial class TerrainGenerator : Node3D
 
                 
                 int tex0 = climates[Mathf.RoundToInt(heatCache[x, y] * 9),Mathf.RoundToInt(moistureCache[x, y] * 9)];
-                climateMap.SetPixel(x, y, new Color((float)tex0 / 255f, 0, 0));
+                
                 int tex1 = climates[Mathf.RoundToInt(heatCache[x + 1, y] * 9), Mathf.RoundToInt(moistureCache[x + 1, y] * 9)];
-                climateMap.SetPixel(x + 1, y, new Color((float)tex1 / 255f, 0, 0));
+                
                 int tex2 = climates[Mathf.RoundToInt(heatCache[x, y + 1] * 9), Mathf.RoundToInt(moistureCache[x, y + 1] * 9)];
-                climateMap.SetPixel(x, y + 1, new Color((float)tex2 / 255f, 0, 0));
+                
                 int tex3 = climates[Mathf.RoundToInt(heatCache[x + 1, y + 1] * 9), Mathf.RoundToInt(moistureCache[x + 1, y + 1] * 9)];
-                climateMap.SetPixel(x + 1, y + 1, new Color((float)tex3 / 255f, 0, 0));
+                
+
+                if (GetTriangleSlope(v0, v1, v2) < -.65f)
+                {
+                    node.ClimateMap.SetPixel(x, y, new Color(0, 0, 0));
+                    node.ClimateMap.SetPixel(x + 1, y, new Color(0, 0, 0));
+                    node.ClimateMap.SetPixel(x, y + 1, new Color(0, 0, 0));
+                    node.ClimateMap.SetPixel(x + 1, y + 1, new Color(0, 0, 0));
+                }
+                else
+                {
+                    node.ClimateMap.SetPixel(x, y, new Color((float)tex0 / 255f, 0, 0));
+                    node.ClimateMap.SetPixel(x + 1, y, new Color((float)tex1 / 255f, 0, 0));
+                    node.ClimateMap.SetPixel(x, y + 1, new Color((float)tex2 / 255f, 0, 0));
+                    node.ClimateMap.SetPixel(x + 1, y + 1, new Color((float)tex3 / 255f, 0, 0));
+                }
+
+
 
                 Vector2 uv0 = new Vector2(v0.X / bounds.Size.X, v0.Z / bounds.Size.Y);
                 Vector2 uv1 = new Vector2(v1.X / bounds.Size.X, v1.Z / bounds.Size.Y);
@@ -289,12 +311,13 @@ public partial class TerrainGenerator : Node3D
             float sampleY = node.Bounds.Position.Y + fy * node.Bounds.Size.Y;
 
             Color grassProbability = DetailMap.SampleMap(sampleX, sampleY, Size);
+            int climate = (int)(node.ClimateMap.GetPixel(Mathf.RoundToInt(fx * ((baseResolution / 2) - 1)), Mathf.RoundToInt(fy * ((baseResolution / 2) - 1))).R * 255f);
 
 
-            if (grassProbability.R > .25)
+            if (grassProbability.R > .25 && (climate == 3 || climate == 4))
             {
                 float heightValue = SampleHeightmap(sampleX, sampleY, Size);
-                Vector3 grassPosition = new Vector3(sampleX + (((grassProbability.G * 2f) - 1f) * 3f), (heightValue * MaxHeight), sampleY + (((grassProbability.B * 2f) - 1f)) * 3f);
+                Vector3 grassPosition = new Vector3(sampleX, (heightValue * MaxHeight), sampleY);
                 Transform3D grassTransform = new Transform3D(Basis.Identity, grassPosition);
                 grassTransform = grassTransform.RotatedLocal(new Vector3(0, 1f, 0), Mathf.DegToRad(grassProbability.G * 180));
                 grassTransforms.Add(grassTransform);
@@ -332,6 +355,8 @@ public partial class TerrainGenerator : Node3D
         Vector2 uv0, Vector2 uv1, Vector2 uv2,
         Color texIndexes)
     {
+        
+
         surfaceTool.SetColor(c1);
         surfaceTool.SetUV(uv0);
         surfaceTool.SetCustom(0, texIndexes);
@@ -363,7 +388,7 @@ public partial class TerrainGenerator : Node3D
             // Generate the LOD mesh if it hasn't been generated yet
             if (!node.LodGenerated[lodLevel])
             {
-                node.LodMeshes[lodLevel] = GenerateLodMesh(node.Bounds, lodLevel);
+                node.LodMeshes[lodLevel] = GenerateLodMesh(node, node.Bounds, lodLevel);
                 if (lodLevel == 0)
                 {
                     GD.Print("doing grass");
@@ -416,6 +441,18 @@ public partial class TerrainGenerator : Node3D
                 UpdateLodRecursively(child, cameraPosition);
             }
         }
+    }
+
+    public float GetTriangleSlope(Vector3 v1,  Vector3 v2, Vector3 v3)
+    {
+        // get two vectors in the triangle
+        Vector3 u = new Vector3(v2.X - v1.X, v2.Y - v1.Y, v2.Z - v1.Z).Normalized();
+        Vector3 v = new Vector3(v3.X - v1.X, v3.Y - v1.Y, v3.Z - v1.Z).Normalized();
+
+        Vector3 n = u.Cross(v).Normalized();
+
+        float angle = Mathf.Acos(n.Dot(Vector3.Up));
+        return Mathf.Tan(angle);
     }
 
     public struct Vertex

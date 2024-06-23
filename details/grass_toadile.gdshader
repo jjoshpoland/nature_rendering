@@ -21,7 +21,7 @@ uniform float metallic: hint_range(0,1) = 0.0;
 uniform float roughness : hint_range(0,1) = 1.0;
 uniform float rim: hint_range(0,1) = 0.01;
 uniform float transmission: hint_range(0,1) = 0.5;
-uniform sampler2D texture_albedo : source_color;
+uniform sampler2D texture_albedo : source_color, filter_nearest;
 uniform sampler2D texture_normal : hint_normal;
 uniform sampler2D texture_wind_noise : source_color;
 uniform sampler2D DEPTH_TEXTURE : hint_depth_texture,filter_linear_mipmap;
