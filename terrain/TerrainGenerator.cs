@@ -317,7 +317,7 @@ public partial class TerrainGenerator : Node3D
             if (grassProbability.R > .25 && (climate == 3 || climate == 4))
             {
                 float heightValue = SampleHeightmap(sampleX, sampleY, Size);
-                Vector3 grassPosition = new Vector3(sampleX, (heightValue * MaxHeight), sampleY);
+                Vector3 grassPosition = new Vector3(sampleX - node.Bounds.Position.X, (heightValue * MaxHeight), sampleY - node.Bounds.Position.Y);
                 Transform3D grassTransform = new Transform3D(Basis.Identity, grassPosition);
                 grassTransform = grassTransform.RotatedLocal(new Vector3(0, 1f, 0), Mathf.DegToRad(grassProbability.G * 180));
                 grassTransforms.Add(grassTransform);
@@ -400,9 +400,9 @@ public partial class TerrainGenerator : Node3D
                     
                     
                     node.GrassMultiMeshInstance.Multimesh = node.GrassMultiMesh;
-                    node.AddChild(node.GrassMultiMeshInstance);
-                    node.GrassMultiMeshInstance.Owner = node;
-
+                    AddChild(node.GrassMultiMeshInstance);
+                    node.GrassMultiMeshInstance.Owner = this;
+                    node.GrassMultiMeshInstance.GlobalPosition = new Vector3(node.Bounds.Position.X, 0, node.Bounds.Position.Y);
                 }
 
                 node.LodGenerated[lodLevel] = true;
