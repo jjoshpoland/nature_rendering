@@ -67,6 +67,10 @@ jump={
 ]
 }
 
+[physics]
+
+3d/default_gravity=1.0
+
 [rendering]
 
 textures/canvas_textures/default_texture_filter=0
@@ -80,4 +84,8 @@ wind_direction={
 ocean_pos={
 "type": "vec3",
 "value": Vector3(0, 0.283, 2266.59)
+}
+player_position={
+"type": "vec3",
+"value": Vector3(0, 0, 0)
 }

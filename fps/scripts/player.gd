@@ -5,6 +5,7 @@ extends CharacterBody3D
 @export var sprinting_speed = 10.0
 @export var crouch_speed = 2.0
 @export var jump_velocity = 4.5
+@export var flying : bool = false
 
 @export_category("Look")
 @export var mouse_sensitivity = 0.25
@@ -107,7 +108,7 @@ func _physics_process(delta):
 		head.position.x = lerp(head.position.x, 0.0, delta * interpolation_speed)
 
 	# Handle jump.
-	if Input.is_action_just_pressed("jump") and is_on_floor():
+	if Input.is_action_just_pressed("jump") && (is_on_floor()):
 		velocity.y = jump_velocity
 		slide_timer.stop()
 		_end_slide()

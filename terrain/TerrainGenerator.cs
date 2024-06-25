@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 
-[Tool]
+
 public partial class TerrainGenerator : Node3D
 {
     [Export]
@@ -101,6 +101,7 @@ public partial class TerrainGenerator : Node3D
             
             prevPlayerPos = Player.GlobalPosition;
         }
+        RenderingServer.GlobalShaderParameterSet("player_position", Player.GlobalPosition);
 	}
 
     public void Generate()
@@ -286,11 +287,7 @@ public partial class TerrainGenerator : Node3D
 
     private void UpdateGrassMultiMesh(QuadTreeNode node, ref Queue<Vector2I> grassCoords)
     {
-        if(node.IsQueuedForDeletion())
-        {
-            node.GrassMultiMesh.Buffer = null;
-            return;
-        }
+        
         RandomNumberGenerator rng = new RandomNumberGenerator();
         List<Transform3D> grassTransforms = new List<Transform3D>();
         int grassResolution = GrassDensity;

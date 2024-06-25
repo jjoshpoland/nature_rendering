@@ -10,7 +10,7 @@
  */
 
 shader_type spatial;
-render_mode blend_mix, cull_disabled, depth_draw_always, diffuse_lambert_wrap;
+render_mode blend_mix, depth_prepass_alpha, depth_draw_opaque, cull_disabled, diffuse_lambert_wrap;
 
 // general parameters
 uniform float y_offset = 0.5;
@@ -106,19 +106,13 @@ void vertex() {
 	else instance_offset = vec3(-color_variatiion*0.1);
 	
 	// fade out grass by shrinking it
-	float view_distance = length(VERTEX - vec3(MODELVIEW_MATRIX[3].x, MODELVIEW_MATRIX[3].y, MODELVIEW_MATRIX[3].z));
-	if (view_distance > fade_out_distance + fade_out_transition) fade = 1.0f; else fade = 0.0f;
-	if (view_distance > fade_out_distance)
-	{
-		float offset = (fade_out_distance + fade_out_transition - view_distance) / fade_out_transition;
-		VERTEX.y *= offset;
-	}
+
 }
 
 //render_mode depth_draw_always; // comment out this if not wanting to use displacement and wanting SSAO
 
 void fragment() {
-	if (fade >= 0.5f) discard;
+	//if (fade >= 0.5f) discard;
 	vec2 base_uv = UV;
 
 	base_uv *= uv_scale;

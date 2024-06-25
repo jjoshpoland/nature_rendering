@@ -13,6 +13,7 @@ albedo_texture = ExtResource("1_1cwk4")
 metallic_specular = 0.0
 texture_filter = 0
 texture_repeat = false
+billboard_mode = 1
 distance_fade_mode = 2
 distance_fade_min_distance = 256.74
 distance_fade_max_distance = 0.0
