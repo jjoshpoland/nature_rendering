@@ -134,6 +134,8 @@ public partial class TerrainGenerator : Node3D
                 child.QueueFree();
             }
         }
+
+        //RenderingServer.FreeRid(GrassMesh.GetRid());
     }
 
     private void GenerateQuadtree(QuadTreeNode node)
@@ -284,6 +286,11 @@ public partial class TerrainGenerator : Node3D
 
     private void UpdateGrassMultiMesh(QuadTreeNode node, ref Queue<Vector2I> grassCoords)
     {
+        if(node.IsQueuedForDeletion())
+        {
+            node.GrassMultiMesh.Buffer = null;
+            return;
+        }
         RandomNumberGenerator rng = new RandomNumberGenerator();
         List<Transform3D> grassTransforms = new List<Transform3D>();
         int grassResolution = GrassDensity;
@@ -311,14 +318,15 @@ public partial class TerrainGenerator : Node3D
                 grassTransform = grassTransform.RotatedLocal(new Vector3(0, 1f, 0), Mathf.DegToRad(grassProbability.G * 180));
                 grassTransforms.Add(grassTransform);
             }
-            else if(grassCoord.X % 4 == 0 && grassCoord.Y % 4 == 0 && grassProbability.G > .7f && climate == 3)
-            {
+            //TODO: Remove tree code and place it in a separate detail generation methods
+            //else if(grassCoord.X % 4 == 0 && grassCoord.Y % 4 == 0 && grassProbability.G > .7f && climate == 3)
+            //{
 
-                Node3D newTree = treeScene.Instantiate<Node3D>();
-                node.AddChild(newTree);
-                newTree.Owner = node;
-                newTree.GlobalPosition = new Vector3(sampleX + ((grassProbability.B * 2f) - 1f), (heightValue * MaxHeight), sampleY + ((grassProbability.G * 2f) - 1f));
-            }
+            //    Node3D newTree = treeScene.Instantiate<Node3D>();
+            //    node.AddChild(newTree);
+            //    newTree.Owner = node;
+            //    newTree.GlobalPosition = new Vector3(sampleX + ((grassProbability.B * 2f) - 1f), (heightValue * MaxHeight), sampleY + ((grassProbability.G * 2f) - 1f));
+            //}
         }
 
 
