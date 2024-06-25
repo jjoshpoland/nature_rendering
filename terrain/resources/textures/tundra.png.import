@@ -1,0 +1,14 @@
+[remap]
+
+importer="image"
+type="Image"
+uid="uid://d4iwgyfb0qbuc"
+path="res://.godot/imported/tundra.png-45c9d8192a65796b7e268b0488bac42c.image"
+
+[deps]
+
+source_file="res://terrain/resources/textures/tundra.png"
+dest_files=["res://.godot/imported/tundra.png-45c9d8192a65796b7e268b0488bac42c.image"]
+
+[params]
+

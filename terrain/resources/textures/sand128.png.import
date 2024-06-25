@@ -1,0 +1,14 @@
+[remap]
+
+importer="image"
+type="Image"
+uid="uid://cm6bcy6o07334"
+path="res://.godot/imported/sand128.png-a3994c7063d7743e33364ab2f0ac1eb7.image"
+
+[deps]
+
+source_file="res://terrain/resources/textures/sand128.png"
+dest_files=["res://.godot/imported/sand128.png-a3994c7063d7743e33364ab2f0ac1eb7.image"]
+
+[params]
+

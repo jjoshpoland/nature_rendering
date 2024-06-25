@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="Biome" load_steps=3 format=3 uid="uid://wwmhv6c0ha56"]
+
+[ext_resource type="Image" uid="uid://cx33au6ijdfq0" path="res://terrain/textures/snow.png" id="1_rl6gf"]
+[ext_resource type="Script" path="res://terrain/resources/biomes/Biome.cs" id="2_vidue"]
+
+[resource]
+script = ExtResource("2_vidue")
+SurfaceTexture = ExtResource("1_rl6gf")
+GrassChance = 0.0
+MeshDetails = null

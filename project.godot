@@ -75,7 +75,7 @@ textures/canvas_textures/default_texture_filter=0
 
 wind_direction={
 "type": "vec3",
-"value": Vector3(0.25, 0, 0)
+"value": Vector3(0.5, 0, 0)
 }
 ocean_pos={
 "type": "vec3",

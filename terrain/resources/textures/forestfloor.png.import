@@ -1,0 +1,14 @@
+[remap]
+
+importer="image"
+type="Image"
+uid="uid://b5ka2dgja403e"
+path="res://.godot/imported/forestfloor.png-6019dfbec6c455f5af521cb1c7e0c578.image"
+
+[deps]
+
+source_file="res://terrain/resources/textures/forestfloor.png"
+dest_files=["res://.godot/imported/forestfloor.png-6019dfbec6c455f5af521cb1c7e0c578.image"]
+
+[params]
+

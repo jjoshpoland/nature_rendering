@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="Biome" load_steps=3 format=3 uid="uid://kf2lm1qj5gak"]
+
+[ext_resource type="Image" uid="uid://v3c3tehly4nk" path="res://terrain/textures/taiga.png" id="1_hyxog"]
+[ext_resource type="Script" path="res://terrain/resources/biomes/Biome.cs" id="2_bipmv"]
+
+[resource]
+script = ExtResource("2_bipmv")
+SurfaceTexture = ExtResource("1_hyxog")
+GrassChance = 0.0
+MeshDetails = null

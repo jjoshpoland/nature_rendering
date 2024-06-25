@@ -46,9 +46,14 @@ public partial class TerrainGenerator : Node3D
     [Export]
     public Image[] TerrainTextures;
     [Export]
+    public Biome[] Biomes;
+    [Export]
     public Mesh GrassMesh;
     [Export]
     public Material GrassMaterial;
+    [Export]
+    public PackedScene TreeScene;
+
     private Texture2DArray TerrainTextureArray;
     private QuadTreeNode quadTreeRoot;
     private Vector3 prevPlayerPos;
@@ -187,11 +192,6 @@ public partial class TerrainGenerator : Node3D
         float[,] heatCache = new float[width, height];
         float[,] moistureCache = new float[width, height];
         node.ClimateMap = Image.Create(width, height, false, Image.Format.Rgba8);
-        if(resolution == 1 && width != bounds.Size.X)
-        {
-            GD.Print(width);
-            GD.Print(bounds.Size.X);
-        }
 
         for (int y = 0; y < height; y++)
         {
@@ -199,15 +199,10 @@ public partial class TerrainGenerator : Node3D
             {
                 float fx = x / (float)(width - 2);
                 float fy = y / (float)(height - 2);
-                //if (resolution <= 2)
-                //{
-                //    fx = x / (float)(width - 1);
-                //    fy = y / (float)(height - 1);
-                //}
 
                 Color env = HeightMap.SampleMap(bounds.Position.X + fx * bounds.Size.X, bounds.Position.Y + fy * bounds.Size.Y, Size);
                 Color heightAdd = SpecialHeightMap.SampleMap(bounds.Position.X + fx * bounds.Size.X, bounds.Position.Y + fy * bounds.Size.Y, Size);
-                heightCache[x, y] = (env.R + (heightAdd.R * specialHeightScale)) * (.75f - heightAdd.G);
+                heightCache[x, y] = ((env.R + (heightAdd.R * specialHeightScale)) + ((heightAdd.B * .5f))) * (.65f - heightAdd.G);
                 heatCache[x,y] = env.G * Mathf.Clamp(2f - heightCache[x,y], .25f, 1f);
                 moistureCache[x,y] = (env.B * 0.75f) + (heightAdd.G * 0.25f);
             }
@@ -234,24 +229,14 @@ public partial class TerrainGenerator : Node3D
                 int tex2 = climates[Mathf.RoundToInt(heatCache[x, y + 1] * 9), Mathf.RoundToInt(moistureCache[x, y + 1] * 9)];
                 
                 int tex3 = climates[Mathf.RoundToInt(heatCache[x + 1, y + 1] * 9), Mathf.RoundToInt(moistureCache[x + 1, y + 1] * 9)];
+
+                bool t1Sloped = GetTriangleSlope(v0, v1, v2) < -.65f;
+                bool t2Sloped = GetTriangleSlope(v2, v1, v3) < -.65f;
                 
-
-                if (GetTriangleSlope(v0, v1, v2) < -.65f)
-                {
-                    node.ClimateMap.SetPixel(x, y, new Color(0, 0, 0));
-                    node.ClimateMap.SetPixel(x + 1, y, new Color(0, 0, 0));
-                    node.ClimateMap.SetPixel(x, y + 1, new Color(0, 0, 0));
-                    node.ClimateMap.SetPixel(x + 1, y + 1, new Color(0, 0, 0));
-                }
-                else
-                {
-                    node.ClimateMap.SetPixel(x, y, new Color((float)tex0 / 255f, 0, 0));
-                    node.ClimateMap.SetPixel(x + 1, y, new Color((float)tex1 / 255f, 0, 0));
-                    node.ClimateMap.SetPixel(x, y + 1, new Color((float)tex2 / 255f, 0, 0));
-                    node.ClimateMap.SetPixel(x + 1, y + 1, new Color((float)tex3 / 255f, 0, 0));
-                }
-
-
+                node.ClimateMap.SetPixel(x, y, new Color((float)tex0 / 255f, t1Sloped ? 0 : 1, 0));
+                node.ClimateMap.SetPixel(x + 1, y, new Color((float)tex1 / 255f, t2Sloped || t1Sloped ? 0 : 1, 0));
+                node.ClimateMap.SetPixel(x, y + 1, new Color((float)tex2 / 255f, t2Sloped || t1Sloped ? 0 : 1, 0));
+                node.ClimateMap.SetPixel(x + 1, y + 1, new Color((float)tex3 / 255f, t2Sloped ? 0 : 1, 0));
 
                 Vector2 uv0 = new Vector2(v0.X / bounds.Size.X, v0.Z / bounds.Size.Y);
                 Vector2 uv1 = new Vector2(v1.X / bounds.Size.X, v1.Z / bounds.Size.Y);
@@ -296,10 +281,13 @@ public partial class TerrainGenerator : Node3D
         }
     }
 
+
     private void UpdateGrassMultiMesh(QuadTreeNode node, ref Queue<Vector2I> grassCoords)
     {
+        RandomNumberGenerator rng = new RandomNumberGenerator();
         List<Transform3D> grassTransforms = new List<Transform3D>();
         int grassResolution = GrassDensity;
+        PackedScene treeScene = ResourceLoader.Load<PackedScene>(TreeScene.ResourcePath);
         if (!grassCoords.Any()) { return; }
         
         for (int i = 0; i < GRASS_BATCH_SIZE && grassCoords.Count > 0; i++)
@@ -311,18 +299,26 @@ public partial class TerrainGenerator : Node3D
             float sampleY = node.Bounds.Position.Y + fy * node.Bounds.Size.Y;
 
             Color grassProbability = DetailMap.SampleMap(sampleX, sampleY, Size);
-            int climate = (int)(node.ClimateMap.GetPixel(Mathf.RoundToInt(fx * ((baseResolution / 2) - 1)), Mathf.RoundToInt(fy * ((baseResolution / 2) - 1))).R * 255f);
+            Color climateDetails = node.ClimateMap.GetPixel((int)(fx * ((baseResolution / 2) - 1)), (int)(fy * ((baseResolution / 2) - 1)));
+            int climate = (int)(climateDetails.R * 255f);
 
-
-            if (grassProbability.R > .25 && (climate == 3 || climate == 4))
+            float heightValue = SampleHeightmap(sampleX, sampleY, Size);
+            if (grassProbability.R > .25 && climateDetails.G == 1 && (climate == 3 || climate == 4))
             {
-                float heightValue = SampleHeightmap(sampleX, sampleY, Size);
+                
                 Vector3 grassPosition = new Vector3(sampleX - node.Bounds.Position.X + ((grassProbability.B * 2f) - 1f), (heightValue * MaxHeight), sampleY - node.Bounds.Position.Y + ((grassProbability.G * 2f) - 1f));
                 Transform3D grassTransform = new Transform3D(Basis.Identity, grassPosition);
                 grassTransform = grassTransform.RotatedLocal(new Vector3(0, 1f, 0), Mathf.DegToRad(grassProbability.G * 180));
                 grassTransforms.Add(grassTransform);
             }
-            
+            else if(grassCoord.X % 4 == 0 && grassCoord.Y % 4 == 0 && grassProbability.G > .7f && climate == 3)
+            {
+
+                Node3D newTree = treeScene.Instantiate<Node3D>();
+                node.AddChild(newTree);
+                newTree.Owner = node;
+                newTree.GlobalPosition = new Vector3(sampleX + ((grassProbability.B * 2f) - 1f), (heightValue * MaxHeight), sampleY + ((grassProbability.G * 2f) - 1f));
+            }
         }
 
 
@@ -346,7 +342,7 @@ public partial class TerrainGenerator : Node3D
     {
         Color env = HeightMap.SampleMap(sampleX, sampleY, size);
         Color heightAdd = SpecialHeightMap.SampleMap(sampleX, sampleY, size);
-        env.R = (env.R + (heightAdd.R * specialHeightScale)) * (.75f - heightAdd.G);
+        env.R = ((env.R + (heightAdd.R * specialHeightScale)) + ((heightAdd.B * .5f))) * (.65f - heightAdd.G);
         return env.R;
     }
 

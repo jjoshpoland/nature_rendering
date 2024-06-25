@@ -1,0 +1,14 @@
+[remap]
+
+importer="image"
+type="Image"
+uid="uid://rk5ne1x72ay6"
+path="res://.godot/imported/drygrass.png-86fa234e77199e6312255d5591dcaa73.image"
+
+[deps]
+
+source_file="res://terrain/resources/textures/drygrass.png"
+dest_files=["res://.godot/imported/drygrass.png-86fa234e77199e6312255d5591dcaa73.image"]
+
+[params]
+

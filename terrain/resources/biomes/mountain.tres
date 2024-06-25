@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="Biome" load_steps=3 format=3 uid="uid://d2pt517d3fx7r"]
+
+[ext_resource type="Image" uid="uid://hdfp8ocnivbx" path="res://terrain/textures/rocks.png" id="1_nwrqf"]
+[ext_resource type="Script" path="res://terrain/resources/biomes/Biome.cs" id="2_oppwv"]
+
+[resource]
+script = ExtResource("2_oppwv")
+SurfaceTexture = ExtResource("1_nwrqf")
+GrassChance = 0.0
+MeshDetails = null

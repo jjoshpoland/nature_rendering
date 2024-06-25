@@ -1,0 +1,14 @@
+[remap]
+
+importer="image"
+type="Image"
+uid="uid://hdfp8ocnivbx"
+path="res://.godot/imported/rocks.png-1beb5de6821ad1b0a9c38376b8c626a0.image"
+
+[deps]
+
+source_file="res://terrain/resources/textures/rocks.png"
+dest_files=["res://.godot/imported/rocks.png-1beb5de6821ad1b0a9c38376b8c626a0.image"]
+
+[params]
+

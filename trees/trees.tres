@@ -1,7 +1,20 @@
-[gd_resource type="ShaderMaterial" load_steps=3 format=3 uid="uid://cto3o4u3ykat0"]
+[gd_resource type="ShaderMaterial" load_steps=5 format=3 uid="uid://cto3o4u3ykat0"]
 
 [ext_resource type="Shader" path="res://tree.gdshader" id="1_qahyj"]
 [ext_resource type="Texture2D" uid="uid://det6poa15t8wo" path="res://trees/textures/bark.png" id="2_8i1gn"]
+
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_yxrdr"]
+noise_type = 4
+seed = -315
+frequency = 0.0374
+offset = Vector3(884.63, 113.2, 0)
+fractal_type = 0
+
+[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_sjxxc"]
+width = 1024
+height = 1024
+generate_mipmaps = false
+noise = SubResource("FastNoiseLite_yxrdr")
 
 [resource]
 resource_local_to_scene = true
@@ -14,6 +27,7 @@ shader_parameter/sway_phase_len = 0.5
 shader_parameter/sway_scale = 1.0
 shader_parameter/pivot = 1.0
 shader_parameter/wave = 0.5
-shader_parameter/shake_strength = Vector3(0, 0, 0)
+shader_parameter/shake_strength = Vector3(0.1, 0.1, 0.1)
 shader_parameter/shake_speed = 1.0
 shader_parameter/texture_albedo = ExtResource("2_8i1gn")
+shader_parameter/wind_noise_texture = SubResource("NoiseTexture2D_sjxxc")

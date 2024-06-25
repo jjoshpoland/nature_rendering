@@ -1,0 +1,14 @@
+[remap]
+
+importer="image"
+type="Image"
+uid="uid://v3c3tehly4nk"
+path="res://.godot/imported/taiga.png-2efdd4b037bd7d72f8e7537652f4c499.image"
+
+[deps]
+
+source_file="res://terrain/resources/textures/taiga.png"
+dest_files=["res://.godot/imported/taiga.png-2efdd4b037bd7d72f8e7537652f4c499.image"]
+
+[params]
+
