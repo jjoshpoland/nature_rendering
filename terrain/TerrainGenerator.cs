@@ -1,10 +1,11 @@
 using Godot;
+using Godot.NativeInterop;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 
-
+[Tool]
 public partial class TerrainGenerator : Node3D
 {
     [Export]
@@ -59,7 +60,7 @@ public partial class TerrainGenerator : Node3D
     private Vector3 prevPlayerPos;
     private MultiMesh grassMultiMesh;
     private MultiMeshInstance3D grassMultiMeshInstance;
-    private const int GRASS_BATCH_SIZE = 1024;
+    private const int GRASS_BATCH_SIZE = 512;
     
 
     private int[,] climates = new int[10, 10] { 
@@ -101,7 +102,6 @@ public partial class TerrainGenerator : Node3D
             
             prevPlayerPos = Player.GlobalPosition;
         }
-        RenderingServer.GlobalShaderParameterSet("player_position", Player.GlobalPosition);
 	}
 
     public void Generate()
@@ -155,6 +155,7 @@ public partial class TerrainGenerator : Node3D
             for (int i = 0; i < LODLevels; i++)
             {
                 node.LodMeshes.Add(null);
+                node.ClimateMaps.Add(null);
                 node.LodGenerated.Add(false);
             }
         }
@@ -163,12 +164,18 @@ public partial class TerrainGenerator : Node3D
 
     private void InitializeGrassMultiMesh(QuadTreeNode node)
     {
+        float[] buffer = new float[GrassDensity * GrassDensity * 32];
+        
         node.GrassMultiMesh.TransformFormat = MultiMesh.TransformFormatEnum.Transform3D;
         node.GrassMultiMesh.Mesh = GrassMesh;
         
 
+
         node.GrassMultiMeshInstance.Multimesh = grassMultiMesh;
+        node.GrassMultiMesh.Buffer = buffer;
+        node.GrassMultiMesh.InstanceCount = GrassDensity * GrassDensity;
         node.GrassMultiMeshInstance.MaterialOverride = GrassMaterial;
+        node.GrassMultiMeshInstance.CastShadow = GeometryInstance3D.ShadowCastingSetting.Off;
         node.GrassMultiMeshInstance.VisibilityRangeFadeMode = GeometryInstance3D.VisibilityRangeFadeModeEnum.Self;
 
     }
@@ -176,10 +183,10 @@ public partial class TerrainGenerator : Node3D
     private Mesh GenerateLodMesh(QuadTreeNode node, Rect2 bounds, int lod)
     {
         int resolution = (int)Math.Pow(2, lod + 1);  // Ensure resolution is at least 2x2
-        return GenerateMesh(node, bounds, resolution);
+        return GenerateMesh(node, bounds, resolution, lod);
     }
 
-    private Mesh GenerateMesh(QuadTreeNode node, Rect2 bounds, int resolution)
+    private Mesh GenerateMesh(QuadTreeNode node, Rect2 bounds, int resolution, int lod)
     {
         var surfaceTool = new SurfaceTool();
         var dataTool = new MeshDataTool();
@@ -194,7 +201,7 @@ public partial class TerrainGenerator : Node3D
         float[,] heightCache = new float[width, height];
         float[,] heatCache = new float[width, height];
         float[,] moistureCache = new float[width, height];
-        node.ClimateMap = Image.Create(width, height, false, Image.Format.Rgba8);
+        node.ClimateMaps[lod] = Image.Create(width, height, false, Image.Format.Rgba8);
 
         for (int y = 0; y < height; y++)
         {
@@ -236,10 +243,10 @@ public partial class TerrainGenerator : Node3D
                 bool t1Sloped = GetTriangleSlope(v0, v1, v2) < -.65f;
                 bool t2Sloped = GetTriangleSlope(v2, v1, v3) < -.65f;
                 
-                node.ClimateMap.SetPixel(x, y, new Color((float)tex0 / 255f, t1Sloped ? 0 : 1, 0));
-                node.ClimateMap.SetPixel(x + 1, y, new Color((float)tex1 / 255f, t2Sloped || t1Sloped ? 0 : 1, 0));
-                node.ClimateMap.SetPixel(x, y + 1, new Color((float)tex2 / 255f, t2Sloped || t1Sloped ? 0 : 1, 0));
-                node.ClimateMap.SetPixel(x + 1, y + 1, new Color((float)tex3 / 255f, t2Sloped ? 0 : 1, 0));
+                node.ClimateMaps[lod].SetPixel(x, y, new Color((float)tex0 / 255f, t1Sloped ? 0 : 1, 0));
+                node.ClimateMaps[lod].SetPixel(x + 1, y, new Color((float)tex1 / 255f, t2Sloped || t1Sloped ? 0 : 1, 0));
+                node.ClimateMaps[lod].SetPixel(x, y + 1, new Color((float)tex2 / 255f, t2Sloped || t1Sloped ? 0 : 1, 0));
+                node.ClimateMaps[lod].SetPixel(x + 1, y + 1, new Color((float)tex3 / 255f, t2Sloped ? 0 : 1, 0));
 
                 Vector2 uv0 = new Vector2(v0.X / bounds.Size.X, v0.Z / bounds.Size.Y);
                 Vector2 uv1 = new Vector2(v1.X / bounds.Size.X, v1.Z / bounds.Size.Y);
@@ -303,7 +310,7 @@ public partial class TerrainGenerator : Node3D
             float sampleY = node.Bounds.Position.Y + fy * node.Bounds.Size.Y;
 
             Color grassProbability = DetailMap.SampleMap(sampleX, sampleY, Size);
-            Color climateDetails = node.ClimateMap.GetPixel((int)(fx * ((baseResolution / 2) - 1)), (int)(fy * ((baseResolution / 2) - 1)));
+            Color climateDetails = node.ClimateMaps[0].GetPixel((int)(fx * ((baseResolution / 2) - 1)), (int)(fy * ((baseResolution / 2) - 1)));
             int climate = (int)(climateDetails.R * 255f);
 
             float heightValue = SampleHeightmap(sampleX, sampleY, Size);
@@ -401,8 +408,8 @@ public partial class TerrainGenerator : Node3D
                     
                     
                     node.GrassMultiMeshInstance.Multimesh = node.GrassMultiMesh;
-                    AddChild(node.GrassMultiMeshInstance);
-                    node.GrassMultiMeshInstance.Owner = this;
+                    node.AddChild(node.GrassMultiMeshInstance);
+                    node.GrassMultiMeshInstance.Owner = node;
                     node.GrassMultiMeshInstance.GlobalPosition = new Vector3(node.Bounds.Position.X, 0, node.Bounds.Position.Y);
                 }
 

@@ -85,7 +85,3 @@ ocean_pos={
 "type": "vec3",
 "value": Vector3(0, 0.283, 2266.59)
 }
-player_position={
-"type": "vec3",
-"value": Vector3(0, 0, 0)
-}
