@@ -1,6 +1,8 @@
 using Godot;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 [Tool]
 public partial class QuadTreeNode : Node3D
@@ -15,10 +17,11 @@ public partial class QuadTreeNode : Node3D
     public int GrassInstances;
     public MultiMesh GrassMultiMesh;
     public MultiMeshInstance3D GrassMultiMeshInstance;
-    public Queue<Vector2I> grassCoordsQueue;
+    public ConcurrentQueue<Vector2I> grassCoordsQueue;
     public Queue<Vector2I> detailCoordsQueue;
     public List<Color[,]> ClimateMaps;
     public List<Rid> GrassDetails;
+    public List<Task<ArrayMesh>> MeshTasks;
 
     public QuadTreeNode(int level, float lodDist, Rect2 bounds)
     {
@@ -33,11 +36,11 @@ public partial class QuadTreeNode : Node3D
         GrassMultiMesh = new MultiMesh();
         //Stupid hack
         GrassDetails = new List<Rid>();
-        
-
+        MeshTasks = new List<Task<ArrayMesh>>();
+    
 
         GrassMultiMeshInstance = new MultiMeshInstance3D();
-        grassCoordsQueue = new Queue<Vector2I>();
+        grassCoordsQueue = new ConcurrentQueue<Vector2I>();
         detailCoordsQueue = new Queue<Vector2I>();
     }
 
@@ -51,7 +54,7 @@ public partial class QuadTreeNode : Node3D
         LodGenerated = new List<bool>();
         MeshInstance = new MeshInstance3D();
         GrassMultiMeshInstance = new MultiMeshInstance3D();
-        grassCoordsQueue = new Queue<Vector2I>();
+        grassCoordsQueue = new ConcurrentQueue<Vector2I>();
         detailCoordsQueue = new Queue<Vector2I>();
     }
 
