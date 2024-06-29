@@ -64,7 +64,7 @@ public partial class TerrainGenerator : Node3D
     private Vector3 prevPlayerPos;
     private MultiMesh grassMultiMesh;
     private MultiMeshInstance3D grassMultiMeshInstance;
-    private const int GRASS_BATCH_SIZE = 512;
+    private const int GRASS_BATCH_SIZE = 256;
     
 
     private int[,] climates = new int[10, 10] { 
@@ -124,6 +124,9 @@ public partial class TerrainGenerator : Node3D
 
     public void Generate()
     {
+        HeightMap.Init(HeightMap.Size);
+        DetailMap.Init(DetailMap.Size);
+        SpecialHeightMap.Init(SpecialHeightMap.Size);
         
         TerrainTextureArray = new Texture2DArray();
         TerrainTextureArray.CreateFromImages(new Godot.Collections.Array<Image>(TerrainTextures));
@@ -227,7 +230,7 @@ public partial class TerrainGenerator : Node3D
         float[,] heightCache = new float[width, height];
         float[,] heatCache = new float[width, height];
         float[,] moistureCache = new float[width, height];
-        node.ClimateMaps[lod] = Image.Create(width, height, false, Image.Format.Rgba8);
+        node.ClimateMaps[lod] = new Color[width, height];
 
         for (int y = 0; y < height; y++)
         {
@@ -269,10 +272,10 @@ public partial class TerrainGenerator : Node3D
                 bool t1Sloped = GetTriangleSlope(v0, v1, v2) < -.65f;
                 bool t2Sloped = GetTriangleSlope(v2, v1, v3) < -.65f;
                 
-                node.ClimateMaps[lod].SetPixel(x, y, new Color((float)tex0 / 255f, t1Sloped ? 0 : 1, 0));
-                node.ClimateMaps[lod].SetPixel(x + 1, y, new Color((float)tex1 / 255f, t2Sloped || t1Sloped ? 0 : 1, 0));
-                node.ClimateMaps[lod].SetPixel(x, y + 1, new Color((float)tex2 / 255f, t2Sloped || t1Sloped ? 0 : 1, 0));
-                node.ClimateMaps[lod].SetPixel(x + 1, y + 1, new Color((float)tex3 / 255f, t2Sloped ? 0 : 1, 0));
+                node.ClimateMaps[lod][x,y] = new Color((float)tex0 / 255f, t1Sloped ? 0 : 1, 0);
+                node.ClimateMaps[lod][x + 1, y] = new Color((float)tex1 / 255f, t2Sloped || t1Sloped ? 0 : 1, 0);
+                node.ClimateMaps[lod][x, y + 1] = new Color((float)tex2 / 255f, t2Sloped || t1Sloped ? 0 : 1, 0);
+                node.ClimateMaps[lod][x + 1, y + 1] = new Color((float)tex3 / 255f, t2Sloped ? 0 : 1, 0);
 
                 Vector2 uv0 = new Vector2(v0.X / bounds.Size.X, v0.Z / bounds.Size.Y);
                 Vector2 uv1 = new Vector2(v1.X / bounds.Size.X, v1.Z / bounds.Size.Y);
@@ -331,7 +334,7 @@ public partial class TerrainGenerator : Node3D
         RandomNumberGenerator rng = new RandomNumberGenerator();
         List<Transform3D> grassTransforms = new List<Transform3D>();
         int grassResolution = GrassDensity;
-        PackedScene treeScene = ResourceLoader.Load<PackedScene>(TreeScene.ResourcePath);
+        //PackedScene treeScene = ResourceLoader.Load<PackedScene>(TreeScene.ResourcePath);
         if (!grassCoords.Any()) { return; }
         
         for (int i = 0; i < GRASS_BATCH_SIZE && grassCoords.Count > 0; i++)
@@ -343,7 +346,7 @@ public partial class TerrainGenerator : Node3D
             float sampleY = node.Bounds.Position.Y + fy * node.Bounds.Size.Y;
 
             Color grassProbability = DetailMap.SampleMap(sampleX, sampleY, Size);
-            Color climateDetails = node.ClimateMaps[0].GetPixel((int)(fx * ((baseResolution / 2) - 1)), (int)(fy * ((baseResolution / 2) - 1)));
+            Color climateDetails = node.ClimateMaps[0][(int)(fx * ((baseResolution / 2) - 1)), (int)(fy * ((baseResolution / 2) - 1))];
             int climate = (int)(climateDetails.R * 255f);
 
             float heightValue = SampleHeightmap(sampleX, sampleY, Size);

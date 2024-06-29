@@ -17,7 +17,7 @@ public partial class QuadTreeNode : Node3D
     public MultiMeshInstance3D GrassMultiMeshInstance;
     public Queue<Vector2I> grassCoordsQueue;
     public Queue<Vector2I> detailCoordsQueue;
-    public List<Image> ClimateMaps;
+    public List<Color[,]> ClimateMaps;
     public List<Rid> GrassDetails;
 
     public QuadTreeNode(int level, float lodDist, Rect2 bounds)
@@ -26,7 +26,7 @@ public partial class QuadTreeNode : Node3D
         Bounds = bounds;
         Children = new List<QuadTreeNode>();
         LodMeshes = new List<Mesh>();
-        ClimateMaps = new List<Image>();
+        ClimateMaps = new List<Color[,]>();
         MeshInstance = new MeshInstance3D();
         LodGenerated = new List<bool>();
         LODDist = lodDist;

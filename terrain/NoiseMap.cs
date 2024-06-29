@@ -28,6 +28,8 @@ public partial class NoiseMap : Node
     [Export]
     Curve bNoiseCurve;
 
+    public Color[,] mapData;
+
     public override void _Process(double delta)
     {
         if(needsUpdate)
@@ -41,7 +43,7 @@ public partial class NoiseMap : Node
     public void Init(int size)
 	{
         map = Image.Create(size, size, false, Image.Format.Rgbaf);
-        
+        mapData = new Color[size,size];
 
         for (int x = 0; x < size; x++)
         {
@@ -61,6 +63,7 @@ public partial class NoiseMap : Node
                  
                  
                 map.SetPixel(x, y, new Color(rValue, gValue, bValue));
+                mapData[x, y] = new Color(rValue, gValue, bValue);
             }
         }
     }
@@ -68,8 +71,8 @@ public partial class NoiseMap : Node
 
     public Color SampleMap(float x, float y, int worldSize)
     {
-        int srcWidth = map.GetWidth();
-        int srcHeight = map.GetHeight();
+        int srcWidth = mapData.GetLength(0);
+        int srcHeight = mapData.GetLength(1);
 
         float gx = (x / worldSize) * (srcWidth - 1);
         float gy = (y / worldSize) * (srcHeight - 1);
@@ -88,9 +91,9 @@ public partial class NoiseMap : Node
                 int p = Mathf.Clamp(gxi + m, 0, srcWidth - 1);
                 int q = Mathf.Clamp(gyi + n, 0, srcHeight - 1);
 
-                float rp = map.GetPixel(p, q).R;
-                float gp = map.GetPixel(p, q).G;
-                float bp = map.GetPixel(p, q).B;
+                float rp = mapData[p, q].R;
+                float gp = mapData[p, q].G;
+                float bp = mapData[p, q].B;
 
                 float wx = BicubicKernel(gx - (gxi + m));
                 float wy = BicubicKernel(gy - (gyi + n));
