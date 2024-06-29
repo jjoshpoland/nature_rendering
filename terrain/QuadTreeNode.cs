@@ -18,6 +18,7 @@ public partial class QuadTreeNode : Node3D
     public Queue<Vector2I> grassCoordsQueue;
     public Queue<Vector2I> detailCoordsQueue;
     public List<Image> ClimateMaps;
+    public List<Rid> GrassDetails;
 
     public QuadTreeNode(int level, float lodDist, Rect2 bounds)
     {
@@ -31,7 +32,8 @@ public partial class QuadTreeNode : Node3D
         LODDist = lodDist;
         GrassMultiMesh = new MultiMesh();
         //Stupid hack
-        GrassMultiMesh.Buffer = null;
+        GrassDetails = new List<Rid>();
+        
 
 
         GrassMultiMeshInstance = new MultiMeshInstance3D();

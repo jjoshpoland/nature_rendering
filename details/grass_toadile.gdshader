@@ -50,6 +50,8 @@ uniform bool displace = true;
 uniform float alpha_scissors : hint_range(0, 1) = 0.9;
 uniform bool use_normal_map_alpha = false;
 
+uniform int instance_id = 0;
+
 // variables
 varying float bend_uv_direction;
 varying vec3 instance_offset;
@@ -63,7 +65,7 @@ void vertex() {
 	COLOR = base_color*vec4(UV.y) + end_color*vec4(inverse_uv_y);
 	
 	// "h" means height
-	float h_variation = float(INSTANCE_ID % 3)*height_variation*0.5;
+	float h_variation = float(int(NODE_POSITION_WORLD.x + NODE_POSITION_WORLD.z) % 3)*height_variation*0.5;
 	float inv_h_stiff = (h_variation + height+1.0) * 2.0;
 	float h_stiff = 1.0/inv_h_stiff;
 	
@@ -94,15 +96,15 @@ void vertex() {
 	float flat_y = cos(MODELVIEW_MATRIX[2].z)*flatness*h_stiff;
 	float bend = pow(inverse_uv_y, 2);
 	float n = (noise_tex.r-0.5*2.0)*bend*wind_strength;
-	VERTEX.x += n*flat_x + sin(TIME*0.01*h_stiff+float(INSTANCE_ID))*n*0.1*inv_h_stiff + local_wind_direction.x*wind_strength*bend*height;
-	VERTEX.z += n*flat_y + cos(TIME*0.01*h_stiff+float(INSTANCE_ID))*n*0.1*inv_h_stiff + local_wind_direction.z*wind_strength*bend*height;
+	VERTEX.x += n*flat_x + sin(TIME*0.01*h_stiff+float(instance_id))*n*0.1*inv_h_stiff + local_wind_direction.x*wind_strength*bend*height;
+	VERTEX.z += n*flat_y + cos(TIME*0.01*h_stiff+float(instance_id))*n*0.1*inv_h_stiff + local_wind_direction.z*wind_strength*bend*height;
 	VERTEX.y += h_variation*inverse_uv_y;
 	VERTEX.y -= inverse_uv_y * flatness * 0.15;
 	
 	// introduce variation per grass instance
-	if (INSTANCE_ID % 2 == 0) bend_uv_direction = 1.0; else bend_uv_direction = -1.0;
+	if (instance_id % 2 == 0) bend_uv_direction = 1.0; else bend_uv_direction = -1.0;
 	
-	if (INSTANCE_ID % 2 == 0) instance_offset = vec3(color_variatiion*0.1); 
+	if (instance_id % 2 == 0) instance_offset = vec3(color_variatiion*0.1); 
 	else instance_offset = vec3(-color_variatiion*0.1);
 	
 	// fade out grass by shrinking it
