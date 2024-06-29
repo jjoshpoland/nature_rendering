@@ -67,6 +67,11 @@ public partial class TerrainGenerator : Node3D
     private MultiMesh grassMultiMesh;
     private MultiMeshInstance3D grassMultiMeshInstance;
     private const int GRASS_BATCH_SIZE = 256;
+    private bool allNodesHeightmapGenerated;
+    public Vector3 playerStartPos;
+
+    [Signal]
+    public delegate void OnGeneratedEventHandler();
     
 
     private int[,] climates = new int[10, 10] { 
@@ -116,7 +121,9 @@ public partial class TerrainGenerator : Node3D
         if (quadTreeRoot == null) {
             Generate();
         }
+
         UpdateLod(Player.GlobalPosition);
+
         if (Player != null && prevPlayerPos != Player.GlobalPosition)
         {
             
@@ -126,6 +133,8 @@ public partial class TerrainGenerator : Node3D
 
     public void Generate()
     {
+        playerStartPos = Player.GlobalPosition;
+        OnGenerated += () =>  Player.GlobalPosition = playerStartPos; 
         HeightMap.Init(HeightMap.Size);
         DetailMap.Init(DetailMap.Size);
         SpecialHeightMap.Init(SpecialHeightMap.Size);
@@ -190,6 +199,33 @@ public partial class TerrainGenerator : Node3D
                 node.LodGenerated.Add(false);
                 node.MeshTasks.Add(null);
             }
+
+            Task heightmapTask = Task.Run(() =>
+            {
+                int width = baseResolution / 2;
+                int height = baseResolution / 2;
+
+                //Cache lod 0 for use in detail generation, town generation, minimap, etc
+                for (int y = 0; y < height; y++)
+                {
+                    for (int x = 0; x < width; x++)
+                    {
+                        float fx = x / (float)(width - 2);
+                        float fy = y / (float)(height - 2);
+
+                        Vector2I coord = new Vector2I(x, y);
+
+                        Color env = HeightMap.SampleMap(node.Bounds.Position.X + fx * node.Bounds.Size.X, node.Bounds.Position.Y + fy * node.Bounds.Size.Y, Size);
+                        Color heightAdd = SpecialHeightMap.SampleMap(node.Bounds.Position.X + fx * node.Bounds.Size.X, node.Bounds.Position.Y + fy * node.Bounds.Size.Y, Size);
+                        node.heightCache[coord] = ((env.R + (heightAdd.R * specialHeightScale)) + ((heightAdd.B * .5f))) * (.65f - heightAdd.G);
+                        node.heatCache[coord] = env.G * Mathf.Clamp(2f - node.heightCache[coord], .25f, 1f);
+                        node.moistureCache[coord] = (env.B * 0.75f) + (heightAdd.G * 0.25f);
+                    }
+                }
+
+                node.heightmapGenerated = true;
+            });
+            
         }
     }
 
@@ -230,13 +266,17 @@ public partial class TerrainGenerator : Node3D
         int width = baseResolution / resolution;
         int height = baseResolution / resolution;
 
-        float[,] heightCache = new float[width, height];
-        float[,] heatCache = new float[width, height];
-        float[,] moistureCache = new float[width, height];
+        
         node.ClimateMaps[lod] = new Color[width, height];
 
         Task<ArrayMesh> heightSampleTask = Task<ArrayMesh>.Run(() =>
         {
+            float[,] heightCache = new float[width, height];
+            float[,] heatCache = new float[width, height];
+            float[,] moistureCache = new float[width, height];
+
+            
+
             for (int y = 0; y < height; y++)
             {
                 for (int x = 0; x < width; x++)
@@ -244,11 +284,23 @@ public partial class TerrainGenerator : Node3D
                     float fx = x / (float)(width - 2);
                     float fy = y / (float)(height - 2);
 
-                    Color env = HeightMap.SampleMap(bounds.Position.X + fx * bounds.Size.X, bounds.Position.Y + fy * bounds.Size.Y, Size);
-                    Color heightAdd = SpecialHeightMap.SampleMap(bounds.Position.X + fx * bounds.Size.X, bounds.Position.Y + fy * bounds.Size.Y, Size);
-                    heightCache[x, y] = ((env.R + (heightAdd.R * specialHeightScale)) + ((heightAdd.B * .5f))) * (.65f - heightAdd.G);
-                    heatCache[x, y] = env.G * Mathf.Clamp(2f - heightCache[x, y], .25f, 1f);
-                    moistureCache[x, y] = (env.B * 0.75f) + (heightAdd.G * 0.25f);
+                    Vector2I coord = new Vector2I(x, y);
+
+                    if (lod != 0)
+                    {
+                        Color env = HeightMap.SampleMap(node.Bounds.Position.X + fx * node.Bounds.Size.X, node.Bounds.Position.Y + fy * node.Bounds.Size.Y, Size);
+                        Color heightAdd = SpecialHeightMap.SampleMap(node.Bounds.Position.X + fx * node.Bounds.Size.X, node.Bounds.Position.Y + fy * node.Bounds.Size.Y, Size);
+                        heightCache[x, y] = ((env.R + (heightAdd.R * specialHeightScale)) + ((heightAdd.B * .5f))) * (.65f - heightAdd.G);
+                        heatCache[x, y] = env.G * Mathf.Clamp(2f - heightCache[x, y], .25f, 1f);
+                        moistureCache[x, y] = (env.B * 0.75f) + (heightAdd.G * 0.25f);
+                    }
+                    else
+                    {
+                        heightCache[x, y] = node.heightCache[coord];
+                        heatCache[x,y] = node.heatCache[coord];
+                        moistureCache[x,y] = node.moistureCache[coord];
+                    }
+                    
                 }
             }
 
@@ -258,6 +310,11 @@ public partial class TerrainGenerator : Node3D
                 {
                     float fx = x / (float)(width - 2);
                     float fy = y / (float)(height - 2);
+
+                    Vector2I c0 = new Vector2I(x, y);
+                    Vector2I c1 = new Vector2I(x + 1, y);
+                    Vector2I c2 = new Vector2I(x, y + 1);
+                    Vector2I c3 = new Vector2I(x + 1, y + 1);
 
                     Vector3 v0 = new Vector3(bounds.Position.X + fx * bounds.Size.X, heightCache[x, y] * MaxHeight, bounds.Position.Y + fy * bounds.Size.Y);
                     Vector3 v1 = new Vector3(bounds.Position.X + (fx + 1.0f / (width - 2)) * bounds.Size.X, heightCache[x + 1, y] * MaxHeight, bounds.Position.Y + fy * bounds.Size.Y);
@@ -449,13 +506,25 @@ public partial class TerrainGenerator : Node3D
 
     public void UpdateLod(Vector3 cameraPosition)
     {
+        bool wasGenerated = allNodesHeightmapGenerated;
+        allNodesHeightmapGenerated = true;
         UpdateLodRecursively(quadTreeRoot, cameraPosition);
+
+        if(!wasGenerated && allNodesHeightmapGenerated)
+        {
+            EmitSignal(SignalName.OnGenerated);
+        }
     }
 
     private void UpdateLodRecursively(QuadTreeNode node, Vector3 cameraPosition)
     {
         if (node.Children.Count == 0)
         {
+            if(!node.heightmapGenerated)
+            {
+                allNodesHeightmapGenerated = false;
+                return;
+            }
             var distance = cameraPosition.DistanceTo(new Vector3(node.Bounds.Position.X + (node.Bounds.Size.X / 2.0f), cameraPosition.Y, node.Bounds.Position.Y + (node.Bounds.Size.Y / 2.0f)));
             int lodLevel = (int)(distance / LODDist);
             lodLevel = Mathf.Clamp(lodLevel, 0, node.LodMeshes.Count - 1);

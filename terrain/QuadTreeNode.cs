@@ -22,6 +22,10 @@ public partial class QuadTreeNode : Node3D
     public List<Color[,]> ClimateMaps;
     public List<Rid> GrassDetails;
     public List<Task<ArrayMesh>> MeshTasks;
+    public ConcurrentDictionary<Vector2I, float> heightCache;
+    public ConcurrentDictionary<Vector2I, float> heatCache;
+    public ConcurrentDictionary<Vector2I, float> moistureCache;
+    public bool heightmapGenerated;
 
     public QuadTreeNode(int level, float lodDist, Rect2 bounds)
     {
@@ -37,11 +41,15 @@ public partial class QuadTreeNode : Node3D
         //Stupid hack
         GrassDetails = new List<Rid>();
         MeshTasks = new List<Task<ArrayMesh>>();
-    
+        heightmapGenerated = false;
+
 
         GrassMultiMeshInstance = new MultiMeshInstance3D();
         grassCoordsQueue = new ConcurrentQueue<Vector2I>();
         detailCoordsQueue = new Queue<Vector2I>();
+        heightCache = new ConcurrentDictionary<Vector2I, float>();
+        heatCache = new ConcurrentDictionary<Vector2I, float>();
+        moistureCache = new ConcurrentDictionary<Vector2I, float>();
     }
 
     public QuadTreeNode()
