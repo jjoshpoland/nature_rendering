@@ -35,6 +35,8 @@ public partial class TerrainGenerator : Node3D
     [Export]
     public int LODLevels = 3;
     [Export]
+    public float seaLevel;
+    [Export]
     public Node3D Player;
     [Export]
     public NoiseMap HeightMap;
@@ -69,6 +71,7 @@ public partial class TerrainGenerator : Node3D
     private const int GRASS_BATCH_SIZE = 256;
     private bool allNodesHeightmapGenerated;
     public Vector3 playerStartPos;
+    public Color[,] fullCache;
 
     [Signal]
     public delegate void OnGeneratedEventHandler();
@@ -76,16 +79,16 @@ public partial class TerrainGenerator : Node3D
 
     private int[,] climates = new int[10, 10] { 
         /*dry*/                         /*wet*/
-/*cold*/{ 2, 2, 9, 9, 9, 9, 8, 8, 8, 7 }, 
-        { 2, 2, 9, 9, 9, 8, 8, 8, 7, 7 },
-        { 2, 2, 8, 8, 8, 8, 7, 6, 7, 7 },
-        { 2, 2, 8, 4, 3, 3, 6, 6, 6, 6 },
-        { 1, 5, 5, 4, 3, 6, 6, 6, 6, 6 },
-        { 1, 5, 5, 4, 3, 6, 6, 6, 6, 6 },
-        { 1, 1, 5, 4, 3, 3, 6, 6, 6, 6 },
-        { 1, 1, 5, 4, 3, 3, 6, 6, 6, 6 },
-        { 1, 1, 1, 5, 5, 5, 5, 6, 0, 0 },
-/*hot*/ { 1, 1, 1, 1, 5, 5, 6, 6, 0, 0 } };
+/*cold*/{ 0, 0, 9, 9, 9, 9, 8, 8, 8, 7 }, 
+        { 0, 0, 9, 9, 9, 8, 8, 8, 7, 7 },
+        { 0, 0, 8, 8, 8, 8, 7, 6, 7, 7 },
+        { 0, 0, 8, 4, 3, 3, 6, 6, 6, 6 },
+        { 2, 5, 5, 4, 3, 6, 6, 6, 6, 6 },
+        { 2, 5, 5, 4, 3, 6, 6, 6, 6, 6 },
+        { 2, 2, 5, 4, 3, 3, 6, 6, 6, 6 },
+        { 2, 2, 5, 4, 3, 3, 6, 6, 6, 6 },
+        { 2, 2, 2, 5, 5, 5, 5, 6, 1, 1 },
+/*hot*/ { 2, 2, 2, 2, 5, 5, 6, 6, 1, 1 } };
     
 	// Called when the node enters the scene tree for the first time.
 	public override void _Ready()
@@ -134,7 +137,8 @@ public partial class TerrainGenerator : Node3D
     public void Generate()
     {
         playerStartPos = Player.GlobalPosition;
-        OnGenerated += () =>  Player.GlobalPosition = playerStartPos; 
+        OnGenerated += () =>  Player.GlobalPosition = playerStartPos;
+        
         HeightMap.Init(HeightMap.Size);
         DetailMap.Init(DetailMap.Size);
         SpecialHeightMap.Init(SpecialHeightMap.Size);
@@ -144,7 +148,8 @@ public partial class TerrainGenerator : Node3D
         TerrainMaterial.SetShaderParameter("texture_array", TerrainTextureArray);
         TerrainMaterial.SetShaderParameter("rock_face_texture", RockFaceTexture);
         TerrainMaterial.SetShaderParameter("sand_texture", SandTexture);
-
+        TerrainMaterial.SetShaderParameter("sea_level", seaLevel);
+        GenerateMapCache();
         quadTreeRoot = new QuadTreeNode(0, LODDist, new Rect2(Vector2.Zero, new Vector2(Size, Size)));
         AddChild(quadTreeRoot);
         quadTreeRoot.Owner = this;
@@ -177,6 +182,36 @@ public partial class TerrainGenerator : Node3D
     {
         Clear();
         RenderingServer.FreeRid(GetWorld3D().Scenario);
+    }
+
+    private void GenerateMapCache()
+    {
+        fullCache = new Color[HeightMap.Size, HeightMap.Size];
+        Task heightmapTask = Task.Run(() =>
+        {
+            int width = HeightMap.Size;
+            int height = HeightMap.Size;
+
+            //Cache lod 0 for use in detail generation, town generation, minimap, etc
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    float fx = x / (float)(width - 2);
+                    float fy = y / (float)(height - 2);
+
+                    Vector2I coord = new Vector2I(x, y);
+
+                    Color env = HeightMap.mapData[x, y];
+                    Color heightAdd = SpecialHeightMap.mapData[x,y];
+                    float elevation = ((env.R + (heightAdd.R * specialHeightScale)) + ((heightAdd.B * .5f))) * (.7f - heightAdd.G);
+                    fullCache[x,y] = new Color( elevation, env.G * Mathf.Clamp(2f - elevation, .25f, 1f), (env.B * 0.75f) + (heightAdd.G * 0.25f));
+                    //node.heatCache[coord] = env.G * Mathf.Clamp(2f - node.heightCache[coord], .25f, 1f);
+                    //node.moistureCache[coord] = (env.B * 0.75f) + (heightAdd.G * 0.25f);
+                }
+            }
+
+        });
     }
 
     private void GenerateQuadtree(QuadTreeNode node)
@@ -216,10 +251,11 @@ public partial class TerrainGenerator : Node3D
                         Vector2I coord = new Vector2I(x, y);
 
                         Color env = HeightMap.SampleMap(node.Bounds.Position.X + fx * node.Bounds.Size.X, node.Bounds.Position.Y + fy * node.Bounds.Size.Y, Size);
-                        Color heightAdd = SpecialHeightMap.SampleMap(node.Bounds.Position.X + fx * node.Bounds.Size.X, node.Bounds.Position.Y + fy * node.Bounds.Size.Y, Size);
-                        node.heightCache[coord] = ((env.R + (heightAdd.R * specialHeightScale)) + ((heightAdd.B * .5f))) * (.65f - heightAdd.G);
-                        node.heatCache[coord] = env.G * Mathf.Clamp(2f - node.heightCache[coord], .25f, 1f);
-                        node.moistureCache[coord] = (env.B * 0.75f) + (heightAdd.G * 0.25f);
+                        //Color heightAdd = SpecialHeightMap.SampleMap(node.Bounds.Position.X + fx * node.Bounds.Size.X, node.Bounds.Position.Y + fy * node.Bounds.Size.Y, Size);
+                        Color modifiedEnv = CalculateHeight(env, node.Bounds.Position.X + fx * node.Bounds.Size.X, node.Bounds.Position.Y + fy * node.Bounds.Size.Y, Size);
+                        node.heightCache[coord] = modifiedEnv.R;
+                        node.heatCache[coord] = modifiedEnv.G;
+                        node.moistureCache[coord] = modifiedEnv.B;
                     }
                 }
 
@@ -289,10 +325,10 @@ public partial class TerrainGenerator : Node3D
                     if (lod != 0)
                     {
                         Color env = HeightMap.SampleMap(node.Bounds.Position.X + fx * node.Bounds.Size.X, node.Bounds.Position.Y + fy * node.Bounds.Size.Y, Size);
-                        Color heightAdd = SpecialHeightMap.SampleMap(node.Bounds.Position.X + fx * node.Bounds.Size.X, node.Bounds.Position.Y + fy * node.Bounds.Size.Y, Size);
-                        heightCache[x, y] = ((env.R + (heightAdd.R * specialHeightScale)) + ((heightAdd.B * .5f))) * (.65f - heightAdd.G);
-                        heatCache[x, y] = env.G * Mathf.Clamp(2f - heightCache[x, y], .25f, 1f);
-                        moistureCache[x, y] = (env.B * 0.75f) + (heightAdd.G * 0.25f);
+                        Color modifiedEnv = CalculateHeight(env, node.Bounds.Position.X + fx * node.Bounds.Size.X, node.Bounds.Position.Y + fy * node.Bounds.Size.Y, Size);
+                        heightCache[x, y] = modifiedEnv.R;
+                        heatCache[x, y] = modifiedEnv.G;
+                        moistureCache[x, y] = modifiedEnv.B;
                     }
                     else
                     {
@@ -423,7 +459,11 @@ public partial class TerrainGenerator : Node3D
                 Color climateDetails = node.ClimateMaps[0][(int)(fx * ((baseResolution / 2) - 1)), (int)(fy * ((baseResolution / 2) - 1))];
                 int climate = (int)(climateDetails.R * 255f);
 
-                float heightValue = SampleHeightmap(sampleX, sampleY, Size);
+                float heightValue = CalculateHeight(HeightMap.SampleMap(sampleX, sampleY, Size), sampleX, sampleY, Size).R;
+                if(heightValue * MaxHeight < seaLevel)
+                {
+                    continue;
+                }
                 if (grassProbability.R > .25 && climateDetails.G == 1 && (climate == 3 || climate == 4))
                 {
 
@@ -473,12 +513,13 @@ public partial class TerrainGenerator : Node3D
         }
     }
 
-    private float SampleHeightmap(float sampleX, float sampleY, int size) 
+    private Color CalculateHeight(Color heightMap, float sampleX, float sampleY, int size) 
     {
-        Color env = HeightMap.SampleMap(sampleX, sampleY, size);
         Color heightAdd = SpecialHeightMap.SampleMap(sampleX, sampleY, size);
-        env.R = ((env.R + (heightAdd.R * specialHeightScale)) + ((heightAdd.B * .5f))) * (.65f - heightAdd.G);
-        return env.R;
+        heightMap.R = ((heightMap.R + (heightAdd.R * specialHeightScale)) + ((heightAdd.B * .5f))) * (.7f - heightAdd.G);
+        heightMap.B = (heightMap.B * 0.75f) + (heightAdd.G * 0.25f);
+        heightMap.G = heightMap.G * Mathf.Clamp(2f - heightMap.R, .25f, 1f);
+        return heightMap;
     }
 
     private void AddTriangle(SurfaceTool surfaceTool, Vector3 v1, Vector3 v2, Vector3 v3, 

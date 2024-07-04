@@ -57,12 +57,10 @@ void fragment() {
 	if(world_pos.y < sea_level + beach_height) {
 		float amt = clamp( abs(world_pos.y - (sea_level + beach_height)) / (5.0)* 0.5, 0.0, 1.0);
 		blended_texture = (blended_texture * (1.0 - amt)) + (tex_sand * amt);
-	}			
-	
-	if(slope < slope_threshold) {
-		blended_texture = blended_texture + (tex_rock * (slope_threshold - slope)) * 5.0;
 	}
-	else if( world_pos.y <= sea_level + beach_height && world_pos.y >= sea_level - 2.0) {
+	
+	blended_texture = (blended_texture * (slope))  + (tex_rock * (1.0  - slope));
+	if( world_pos.y <= sea_level + beach_height && world_pos.y >= sea_level - 2.0) {
 		float amt = clamp( abs(world_pos.y - (sea_level + beach_height)) / (sea_level + beach_height) * 3.0, 0.0, 1.0);
 		blended_texture = (blended_texture * (1.0 - amt)) + (tex_sand * amt * (slope / beach_slope_threshold));
 	}
