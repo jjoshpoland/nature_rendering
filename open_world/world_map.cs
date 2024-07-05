@@ -1,5 +1,6 @@
 using Godot;
 using System;
+using System.Collections.Generic;
 using System.Data.Common;
 
 [Tool]
@@ -14,6 +15,8 @@ public partial class world_map : Node
     public Image map;
 	[Export]
 	public TerrainGenerator Terrain;
+    [Export]
+    public TerrainPathfinder TerrainPathfinder;
     public Color[,] mapData;
 
     // Called when the node enters the scene tree for the first time.
@@ -41,15 +44,39 @@ public partial class world_map : Node
             {
                 for (int y = 0; y < Size; y++)
                 {
-                    map.SetPixel(x, y, NoiseMap.SampleData(Terrain.fullCache, x, y, Size));
+                    map.SetPixel(x, y, Colors.Black);
                 }
             }
         }
+        GeneratePOILocations();
     }
 
     void GeneratePOILocations()
     {
+        RandomNumberGenerator rng = new RandomNumberGenerator();
+        rng.Randomize();
+        Vector2I poiA = new Vector2I(rng.RandiRange(0, Terrain.fullMap.GetLength(0) - 1), rng.RandiRange(0, Terrain.fullMap.GetLength(1) - 1));
+        Vector2I poiB = new Vector2I(rng.RandiRange(0, Terrain.fullMap.GetLength(0) - 1), rng.RandiRange(0, Terrain.fullMap.GetLength(1) - 1));
 
+        List<Vector2I> path = TerrainPathfinder.FindPath(Terrain.fullMap, poiA, poiB);
+
+        if (path != null)
+        { 
+            if (path.Count == 0)
+            {
+                GD.PrintErr("could not find path between " + poiA + " and " + poiB);
+            }
+            float ratio = map.GetHeight() / (Terrain.Size / 2f); //assuming square. need two ratios if not
+            foreach(Vector2I point in path)
+            {
+                map.SetPixel(Mathf.RoundToInt( point.X * ratio), Mathf.RoundToInt(point.Y * ratio), Colors.Yellow);
+                GD.Print(point);
+            }
+        }
+        else 
+        {
+            GD.PrintErr("could not find path between " + poiA + " and " + poiB);
+        }
     }
 
     void GenerateCivilization()
