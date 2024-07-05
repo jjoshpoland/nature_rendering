@@ -61,3 +61,6 @@ thirdparty/* linguist-vendored
 *.tga filter=lfs diff=lfs merge=lfs -text
 *.tif filter=lfs diff=lfs merge=lfs -text
 *.tiff filter=lfs diff=lfs merge=lfs -text
+
+# Special
+terrain_generator2.tscn filter=lfs diff=lfs merge=lfs -text
