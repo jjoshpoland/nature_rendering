@@ -85,7 +85,7 @@ public partial class TerrainPathfinder : Node
                     continue;
                 }
 
-                float heightDifference = Mathf.Abs( mapData[q.pos.X, q.pos.Y].Color.R - mapData[neighbor.pos.X, neighbor.pos.Y].Color.R);
+                float heightDifference = Mathf.Abs( mapData[q.pos.X, q.pos.Y].Environment.R - mapData[neighbor.pos.X, neighbor.pos.Y].Environment.R);
                 int distance = q.distance + 1 + (Mathf.RoundToInt(heightDifference) * 50);
                 if (neighbor.SearchPhase < searchPhase)
                 {

@@ -141,7 +141,7 @@ public partial class TerrainGenerator : Node3D
         playerStartPos = Player.GlobalPosition;
         OnGenerated += () =>  Player.GlobalPosition = playerStartPos;
         FullCache = new ConcurrentDictionary<Vector2, Color>();
-        fullMap = new MapPoint[Size/2, Size/2];
+        fullMap = new MapPoint[Size, Size];
         
         HeightMap.Init(HeightMap.Size);
         DetailMap.Init(DetailMap.Size);
@@ -240,8 +240,8 @@ public partial class TerrainGenerator : Node3D
             }
             Task heightmapTask = Task.Run(() =>
             {
-                int width = baseResolution / 2;
-                int height = baseResolution / 2;
+                int width = baseResolution;
+                int height = baseResolution;
                 //Cache lod 0 for use in detail generation, town generation, minimap, etc
                 for (int y = 0; y < height; y++)
                 {
@@ -259,7 +259,7 @@ public partial class TerrainGenerator : Node3D
                         FullCache[pos] = modifiedEnv;
                         try
                         {
-                            fullMap[((int)node.Bounds.Position.X / 2) + x, ((int)node.Bounds.Position.Y / 2) + y] = new MapPoint(pos, new Vector2I(((int)node.Bounds.Position.X / 2) + x, ((int)node.Bounds.Position.Y / 2) + y), modifiedEnv);
+                            fullMap[((int)node.Bounds.Position.X) + x, ((int)node.Bounds.Position.Y / 2) + y] = new MapPoint(pos, new Vector2I(((int)node.Bounds.Position.X) + x, ((int)node.Bounds.Position.Y / 2) + y), modifiedEnv);
                         }
                         catch (Exception e)
                         {
@@ -271,6 +271,11 @@ public partial class TerrainGenerator : Node3D
                 node.heightmapGenerated = true;
             });
         }
+    }
+
+    public void ReWritePoint(MapPoint point)
+    {
+        FullCache[point.Position] = point.Environment;
     }
 
 
@@ -294,7 +299,7 @@ public partial class TerrainGenerator : Node3D
 
     private Task<ArrayMesh> GenerateLodMesh(QuadTreeNode node, Rect2 bounds, int lod)
     {
-        int resolution = (int)Math.Pow(2, lod + 1);  // Ensure resolution is at least 2x2
+        int resolution = (int)Math.Pow(2, lod);  // Ensure resolution is at least 2x2
         return GenerateMesh(node, bounds, resolution, lod);
     }
 
@@ -465,7 +470,7 @@ public partial class TerrainGenerator : Node3D
                 float sampleY = node.Bounds.Position.Y + fy * node.Bounds.Size.Y;
 
                 Color grassProbability = DetailMap.SampleMap(sampleX, sampleY, Size);
-                Color climateDetails = node.ClimateMaps[0][(int)(fx * ((baseResolution / 2) - 1)), (int)(fy * ((baseResolution / 2) - 1))];
+                Color climateDetails = node.ClimateMaps[0][(int)(fx * ((baseResolution) - 1)), (int)(fy * ((baseResolution) - 1))];
                 int climate = (int)(climateDetails.R * 255f);
 
                 float heightValue = CalculateHeight(HeightMap.SampleMap(sampleX, sampleY, Size), sampleX, sampleY, Size).R;
@@ -690,12 +695,13 @@ public class MapPoint
 {
     public Vector2 Position;
     public Vector2I Coords;
-    public Color Color;
+    public Color Environment;
+    public int ClimateOverride;
 
     public MapPoint(Vector2 position, Vector2I coords, Color color)
     {
         Position = position;
         Coords = coords;
-        Color = color;
+        Environment = color;
     }
 }
