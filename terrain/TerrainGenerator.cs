@@ -43,7 +43,7 @@ public partial class TerrainGenerator : Node3D
     [Export]
     public NoiseMap SpecialHeightMap;
     [Export]
-    public int GrassDensity = 256;
+    public float GrassDensity = .25f;
     [Export]
     public NoiseMap DetailMap;
     [Export]
@@ -56,6 +56,8 @@ public partial class TerrainGenerator : Node3D
     public Image[] TerrainTextures;
     [Export]
     public Biome[] Biomes;
+    [Export]
+    public MapPreprocessor[] Preprocessors;
     [Export]
     public Mesh GrassMesh;
     [Export]
@@ -163,7 +165,9 @@ public partial class TerrainGenerator : Node3D
 
     public void Clear()
     {
-
+        fullMap = null;
+        fullCache = null;
+        if (FullCache != null) FullCache.Clear();
         if(quadTreeRoot != null)
         {
             ClearNodeDetails(quadTreeRoot);
@@ -247,8 +251,8 @@ public partial class TerrainGenerator : Node3D
                 {
                     for (int x = 0; x < width; x++)
                     {
-                        float fx = x / (float)(width - 2);
-                        float fy = y / (float)(height - 2);
+                        float fx = x / (float)(width);
+                        float fy = y / (float)(height);
 
                         Vector2I coord = new Vector2I(x, y);
                         Vector2 pos = new Vector2(node.Bounds.Position.X + fx * node.Bounds.Size.X, node.Bounds.Position.Y + fy * node.Bounds.Size.Y);
@@ -259,7 +263,10 @@ public partial class TerrainGenerator : Node3D
                         FullCache[pos] = modifiedEnv;
                         try
                         {
-                            fullMap[((int)node.Bounds.Position.X) + x, ((int)node.Bounds.Position.Y / 2) + y] = new MapPoint(pos, new Vector2I(((int)node.Bounds.Position.X) + x, ((int)node.Bounds.Position.Y / 2) + y), modifiedEnv);
+                            MapPoint newPoint = new MapPoint(pos, new Vector2I(((int)node.Bounds.Position.X) + x, ((int)node.Bounds.Position.Y) + y), modifiedEnv);
+                            newPoint.Climate = climates[Mathf.RoundToInt(modifiedEnv.G * 9), Mathf.RoundToInt(modifiedEnv.B * 9)];
+                            fullMap[((int)node.Bounds.Position.X) + x, ((int)node.Bounds.Position.Y) + y] = newPoint;
+                            //Preview.SetPixel(((int)node.Bounds.Position.X) + x, ((int)node.Bounds.Position.Y) + y, modifiedEnv);
                         }
                         catch (Exception e)
                         {
@@ -270,6 +277,8 @@ public partial class TerrainGenerator : Node3D
 
                 node.heightmapGenerated = true;
             });
+            
+            
         }
     }
 
@@ -279,23 +288,23 @@ public partial class TerrainGenerator : Node3D
     }
 
 
-    private void InitializeGrassMultiMesh(QuadTreeNode node)
-    {
-        float[] buffer = new float[GrassDensity * GrassDensity * 32];
+    //private void InitializeGrassMultiMesh(QuadTreeNode node)
+    //{
+    //    float[] buffer = new float[GrassDensity * GrassDensity * 32];
         
-        node.GrassMultiMesh.TransformFormat = MultiMesh.TransformFormatEnum.Transform3D;
-        node.GrassMultiMesh.Mesh = GrassMesh;
+    //    node.GrassMultiMesh.TransformFormat = MultiMesh.TransformFormatEnum.Transform3D;
+    //    node.GrassMultiMesh.Mesh = GrassMesh;
         
 
 
-        node.GrassMultiMeshInstance.Multimesh = grassMultiMesh;
-        node.GrassMultiMesh.Buffer = buffer;
-        node.GrassMultiMesh.InstanceCount = GrassDensity * GrassDensity;
-        node.GrassMultiMeshInstance.MaterialOverride = GrassMaterial;
-        node.GrassMultiMeshInstance.CastShadow = GeometryInstance3D.ShadowCastingSetting.Off;
-        node.GrassMultiMeshInstance.VisibilityRangeFadeMode = GeometryInstance3D.VisibilityRangeFadeModeEnum.Self;
+    //    node.GrassMultiMeshInstance.Multimesh = grassMultiMesh;
+    //    node.GrassMultiMesh.Buffer = buffer;
+    //    node.GrassMultiMesh.InstanceCount = GrassDensity * GrassDensity;
+    //    node.GrassMultiMeshInstance.MaterialOverride = GrassMaterial;
+    //    node.GrassMultiMeshInstance.CastShadow = GeometryInstance3D.ShadowCastingSetting.Off;
+    //    node.GrassMultiMeshInstance.VisibilityRangeFadeMode = GeometryInstance3D.VisibilityRangeFadeModeEnum.Self;
 
-    }
+    //}
 
     private Task<ArrayMesh> GenerateLodMesh(QuadTreeNode node, Rect2 bounds, int lod)
     {
@@ -316,70 +325,114 @@ public partial class TerrainGenerator : Node3D
         int height = baseResolution / resolution;
 
         
-        node.ClimateMaps[lod] = new Color[width, height];
+        node.ClimateMaps[lod] = new Color[width + 1, height + 1];
 
         Task<ArrayMesh> heightSampleTask = Task<ArrayMesh>.Run(() =>
         {
-            float[,] heightCache = new float[width, height];
-            float[,] heatCache = new float[width, height];
-            float[,] moistureCache = new float[width, height];
+            float[,] heightCache = new float[width + 1, height + 1];
+            float[,] heatCache = new float[width + 1, height + 1];
+            float[,] moistureCache = new float[width + 1, height + 1];
+            int[,] climateCache = new int[width + 1, height + 1];
 
             
+
+            for (int y = 0; y <= height; y++)
+            {
+                for (int x = 0; x <= width; x++)
+                {
+                    
+                    float fx = x / (float)(width);
+                    float fy = y / (float)(height);
+
+                    Vector2I coord = new Vector2I((int)node.Bounds.Position.X + x, (int)node.Bounds.Position.Y + y);
+                    Vector2 pos = new Vector2(node.Bounds.Position.X + fx * node.Bounds.Size.X, node.Bounds.Position.Y + fy * node.Bounds.Size.Y);
+
+                    int xMargin = 0;
+                    int yMargin = 0;
+
+                    if (coord.X == fullMap.GetLength(0))
+                    {
+                        xMargin = -1;
+                    }
+                    if (coord.Y == fullMap.GetLength(1))
+                    {
+                        yMargin = -1;
+                    }
+
+                    if (pos.X == fullMap.GetLength(0))
+                    {
+                        xMargin = -1;
+                    }
+                    if (pos.Y == fullMap.GetLength(1))
+                    {
+                        yMargin = -1;
+                    }
+
+                    try
+                    {
+                        heightCache[x, y] = fullMap[(int)pos.X + xMargin, (int)pos.Y + yMargin].Environment.R;
+                        heatCache[x, y] = fullMap[(int)pos.X + xMargin, (int)pos.Y + yMargin].Environment.G;
+                        moistureCache[x, y] = fullMap[(int)pos.X + xMargin, (int)pos.Y + yMargin].Environment.B;
+                        climateCache[x,y] = fullMap[(int)pos.X + xMargin, (int)pos.Y + yMargin].Climate;
+                    }
+                    catch (Exception e)
+                    {
+                        GD.PrintErr(e + ". x: " + (int)pos.X + ", y: " + (int)pos.Y + " is " + fullMap[(int)pos.X + xMargin, (int)pos.Y + yMargin]);
+                        //return null;
+                    }
+
+                    //if (lod != 0)
+                    //{
+                    //    //Color env = fullMap[(int)pos.X, (int)pos.Y].Environment;
+                    //    //Color modifiedEnv = CalculateHeight(env, pos.X, pos.Y, Size);c
+                        
+                    //}
+                    //else
+                    //{
+                    //    try
+                    //    {
+                    //        heightCache[x, y] = fullMap[coord.X + xMargin, coord.Y + yMargin].Environment.R;
+                    //        heatCache[x, y] = fullMap[coord.X + xMargin, coord.Y + yMargin].Environment.G;
+                    //        moistureCache[x, y] = fullMap[coord.X + xMargin, coord.Y + yMargin].Environment.B;
+                    //    }
+                    //    catch (Exception e)
+                    //    {
+                    //        GD.PrintErr(e + ". x: " + coord.X + ", y: " + coord.Y + " is " + fullMap[coord.X + xMargin, coord.Y + yMargin]);
+                    //        //return null;
+                    //    }
+                    //}
+                    
+                }
+            }
 
             for (int y = 0; y < height; y++)
             {
                 for (int x = 0; x < width; x++)
                 {
-                    float fx = x / (float)(width - 2);
-                    float fy = y / (float)(height - 2);
-
-                    Vector2I coord = new Vector2I(x, y);
-                    Vector2 pos = new Vector2(node.Bounds.Position.X + fx * node.Bounds.Size.X, node.Bounds.Position.Y + fy * node.Bounds.Size.Y);
-
-                    if (lod != 0)
-                    {
-                        Color env = HeightMap.SampleMap(pos.X, pos.Y, Size);
-                        Color modifiedEnv = CalculateHeight(env, pos.X, pos.Y, Size);
-                        heightCache[x, y] = modifiedEnv.R;
-                        heatCache[x, y] = modifiedEnv.G;
-                        moistureCache[x, y] = modifiedEnv.B;
-                    }
-                    else
-                    {
-                        heightCache[x, y] = FullCache[pos].R;
-                        heatCache[x,y] = FullCache[pos].G;
-                        moistureCache[x,y] = FullCache[pos].B;
-                    }
-                    
-                }
-            }
-
-            for (int y = 0; y < height - 1; y++)
-            {
-                for (int x = 0; x < width - 1; x++)
-                {
-                    float fx = x / (float)(width - 2);
-                    float fy = y / (float)(height - 2);
+                    float fx = x / (float)(width);
+                    float fy = y / (float)(height);
 
                     Vector2I c0 = new Vector2I(x, y);
                     Vector2I c1 = new Vector2I(x + 1, y);
                     Vector2I c2 = new Vector2I(x, y + 1);
                     Vector2I c3 = new Vector2I(x + 1, y + 1);
 
+
+
                     Vector3 v0 = new Vector3(bounds.Position.X + fx * bounds.Size.X, heightCache[x, y] * MaxHeight, bounds.Position.Y + fy * bounds.Size.Y);
-                    Vector3 v1 = new Vector3(bounds.Position.X + (fx + 1.0f / (width - 2)) * bounds.Size.X, heightCache[x + 1, y] * MaxHeight, bounds.Position.Y + fy * bounds.Size.Y);
-                    Vector3 v2 = new Vector3(bounds.Position.X + fx * bounds.Size.X, heightCache[x, y + 1] * MaxHeight, bounds.Position.Y + (fy + 1.0f / (height - 2)) * bounds.Size.Y);
-                    Vector3 v3 = new Vector3(bounds.Position.X + (fx + 1.0f / (width - 2)) * bounds.Size.X, heightCache[x + 1, y + 1] * MaxHeight, bounds.Position.Y + (fy + 1.0f / (height - 2)) * bounds.Size.Y);
+                    Vector3 v1 = new Vector3(bounds.Position.X + (fx + 1.0f / (width)) * bounds.Size.X, heightCache[x + 1, y] * MaxHeight, bounds.Position.Y + fy * bounds.Size.Y);
+                    Vector3 v2 = new Vector3(bounds.Position.X + fx * bounds.Size.X, heightCache[x, y + 1] * MaxHeight, bounds.Position.Y + (fy + 1.0f / (height)) * bounds.Size.Y);
+                    Vector3 v3 = new Vector3(bounds.Position.X + (fx + 1.0f / (width)) * bounds.Size.X, heightCache[x + 1, y + 1] * MaxHeight, bounds.Position.Y + (fy + 1.0f / (height)) * bounds.Size.Y);
 
 
 
-                    int tex0 = climates[Mathf.RoundToInt(heatCache[x, y] * 9), Mathf.RoundToInt(moistureCache[x, y] * 9)];
+                    int tex0 = climateCache[x, y];
 
-                    int tex1 = climates[Mathf.RoundToInt(heatCache[x + 1, y] * 9), Mathf.RoundToInt(moistureCache[x + 1, y] * 9)];
+                    int tex1 = climateCache[x + 1, y];
 
-                    int tex2 = climates[Mathf.RoundToInt(heatCache[x, y + 1] * 9), Mathf.RoundToInt(moistureCache[x, y + 1] * 9)];
+                    int tex2 = climateCache[x, y + 1];
 
-                    int tex3 = climates[Mathf.RoundToInt(heatCache[x + 1, y + 1] * 9), Mathf.RoundToInt(moistureCache[x + 1, y + 1] * 9)];
+                    int tex3 = climateCache[x + 1, y + 1];
 
                     bool t1Sloped = GetTriangleSlope(v0, v1, v2) < -.65f;
                     bool t2Sloped = GetTriangleSlope(v2, v1, v3) < -.65f;
@@ -388,6 +441,7 @@ public partial class TerrainGenerator : Node3D
                     node.ClimateMaps[lod][x + 1, y] = new Color((float)tex1 / 255f, t2Sloped || t1Sloped ? 0 : 1, 0);
                     node.ClimateMaps[lod][x, y + 1] = new Color((float)tex2 / 255f, t2Sloped || t1Sloped ? 0 : 1, 0);
                     node.ClimateMaps[lod][x + 1, y + 1] = new Color((float)tex3 / 255f, t2Sloped ? 0 : 1, 0);
+
 
                     Vector2 uv0 = new Vector2(v0.X / bounds.Size.X, v0.Z / bounds.Size.Y);
                     Vector2 uv1 = new Vector2(v1.X / bounds.Size.X, v1.Z / bounds.Size.Y);
@@ -436,27 +490,27 @@ public partial class TerrainGenerator : Node3D
         //return mesh; 
     }
 
-    private void ScatterGrass(ref Queue<Vector2I> grassCoords, Rect2 bounds)
-    {
-        int grassResolution = GrassDensity; // Higher resolution for grass scattering
-        for (int y = 0; y < grassResolution; y++)
-        {
-            for (int x = 0; x < grassResolution; x++)
-            {
-                grassCoords.Enqueue(new Vector2I(x, y));
+    //private void ScatterGrass(ref Queue<Vector2I> grassCoords, Rect2 bounds)
+    //{
+    //    int grassResolution = GrassDensity; // Higher resolution for grass scattering
+    //    for (int y = 0; y < grassResolution; y++)
+    //    {
+    //        for (int x = 0; x < grassResolution; x++)
+    //        {
+    //            grassCoords.Enqueue(new Vector2I(x, y));
                 
-            }
-        }
+    //        }
+    //    }
 
-    }
+    //}
 
 
     private void UpdateGrassMultiMesh(QuadTreeNode node, ref ConcurrentQueue<Vector2I> grassCoords)
     {
         
         RandomNumberGenerator rng = new RandomNumberGenerator();
+        rng.Randomize();
         List<Transform3D> grassTransforms = new List<Transform3D>();
-        int grassResolution = GrassDensity;
         //PackedScene treeScene = ResourceLoader.Load<PackedScene>(TreeScene.ResourcePath);
         if (!grassCoords.Any()) { return; }
         
@@ -464,13 +518,17 @@ public partial class TerrainGenerator : Node3D
         {
             if(grassCoords.TryDequeue(out Vector2I grassCoord))
             {
-                float fx = grassCoord.X / (float)(grassResolution - 1);
-                float fy = grassCoord.Y / (float)(grassResolution - 1);
+                if(rng.RandfRange(0f, 1f) > GrassDensity)
+                {
+                    continue;
+                }
+                float fx = grassCoord.X / (float)(baseResolution);
+                float fy = grassCoord.Y / (float)(baseResolution);
                 float sampleX = node.Bounds.Position.X + fx * node.Bounds.Size.X;
                 float sampleY = node.Bounds.Position.Y + fy * node.Bounds.Size.Y;
 
                 Color grassProbability = DetailMap.SampleMap(sampleX, sampleY, Size);
-                Color climateDetails = node.ClimateMaps[0][(int)(fx * ((baseResolution) - 1)), (int)(fy * ((baseResolution) - 1))];
+                Color climateDetails = node.ClimateMaps[0][(int)(fx * ((baseResolution - 1) )), (int)(fy * ((baseResolution - 1) ))];
                 int climate = (int)(climateDetails.R * 255f);
 
                 float heightValue = CalculateHeight(HeightMap.SampleMap(sampleX, sampleY, Size), sampleX, sampleY, Size).R;
@@ -603,7 +661,10 @@ public partial class TerrainGenerator : Node3D
 
                     }
                 }
-
+                else if (node.MeshTasks[lodLevel].IsFaulted)
+                {
+                    GD.Print(node.MeshTasks[lodLevel].Exception);
+                }
                 
                 
                 
@@ -615,7 +676,7 @@ public partial class TerrainGenerator : Node3D
                 node.GrassMultiMeshInstance.Visible = lodLevel == 0;
             }
 
-            if(lodLevel == 0)
+            if(lodLevel == 0 && node.MeshTasks[0].IsCompletedSuccessfully)
             {
                 UpdateGrassMultiMesh(node, ref node.grassCoordsQueue);
             }
@@ -696,12 +757,29 @@ public class MapPoint
     public Vector2 Position;
     public Vector2I Coords;
     public Color Environment;
+    public int Climate
+    {
+        get
+        {
+            if (ClimateOverride > -1)
+            {
+                return ClimateOverride;
+            }
+            else return climate;
+        }
+        set
+        {
+            climate = value;
+        }
+    }
     public int ClimateOverride;
+    int climate;
 
     public MapPoint(Vector2 position, Vector2I coords, Color color)
     {
         Position = position;
         Coords = coords;
         Environment = color;
+        ClimateOverride = -1;
     }
 }

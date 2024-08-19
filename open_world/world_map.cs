@@ -32,6 +32,7 @@ public partial class world_map : MapPreprocessor
             foreach(Vector2I point in path)
             {
                 UpdateImage(point.X, point.Y, ratio, Colors.Yellow);
+                mapPoints[point.X, point.Y].ClimateOverride = 0;
             }
         }
         else 
